@@ -354,7 +354,7 @@ const store = {
     const r = E.renderAt(poster ? POSTER : ended ? TL.total - 1.0 : t);
     const pct = (t / TL.total * 100) + '%';
     fill.style.width = pct; head.style.left = pct;
-    timeEl.textContent = mmss(t) + ' / ' + mmss(TL.total);
+    timeEl.textContent = (playing && !hasAudio ? 'loading narration… ' : '') + mmss(t) + ' / ' + mmss(TL.total);
     $('seek').setAttribute('aria-valuenow', t.toFixed(0));
     drawCaption(t);
     if (r.scene !== lastScene) { chBtns.forEach((b, i) => b.classList.toggle('on', i === r.scene)); lastScene = r.scene; }
