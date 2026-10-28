@@ -15,7 +15,7 @@
     ],
     hud: { stage: 6, shape: RES },
     draw(ctx, S) {
-      const x0 = 150, y0 = 200, w = 1620, h = 600, tot = 315438720;
+      const x0 = 150, y0 = 210, w = 1620, h = 560, tot = 315438720;
       const grow = easeOut4((S.T(0) - 0.3) / 1.6);
       // treemap: transformer block on the left, the small parts stacked on the right
       const tw = w * PARTS[0][1] / tot;
@@ -23,7 +23,7 @@
       X.card(ctx, x0 - 20, y0 - 20, w + 40, h + 40, S.p(0, 0.6, 0));
       for (let i = 0; i < 24; i++) {
         const r = Math.floor(i / 6), c = i % 6, cw = (tw - 20) / 6, ch = (h - 20) / 4;
-        const k = easeOut4((S.T(0) - 9 - i * 0.05) / 0.5) * grow;
+        const k = easeOut4((S.T(0) - 9.5 - i * 0.05) / 0.5) * grow;
         if (k <= 0) continue;
         const x = x0 + c * cw + 4, y = y0 + r * ch + 4;
         rrect(ctx, x, y, (cw - 8) * k, ch - 8, 8, rgba(COL.H, 0.16), rgba(COL.H, 0.5), 1.5);
@@ -32,21 +32,23 @@
         if (fx > 0) { rrect(ctx, x, y + (ch - 8) / 3, (cw - 8) * k, 2, 0, rgba(COL.C, 0.8 * fx), null); rrect(ctx, x + 2, y + (ch - 8) / 3 + 4, (cw - 12) * k, (ch - 8) * 2 / 3 - 6, 6, rgba(COL.C, 0.18 * fx), null); }
         txt(ctx, String(i + 1), x + 12, y + 30, { size: 18, mono: true, weight: 700, color: COL.H, alpha: k });
       }
+      // the four small parts are thin slivers on the right; their labels live in a legend underneath
       let yy = y0;
       PARTS.slice(1).forEach(([lab, v, col], i) => {
-        const hh = Math.max(56, (h - 40) * [0.62, 0.32, 0.06, 0][i] || 56);
-        const k = S.p(0, 0.6, [6, 0.5, 3.5, 12][i]);
+        const hh = [0.62, 0.32, 0.05, 0.01][i] * h;
+        const k = S.p(0, 0.6, [7, 1.5, 4.5, 12][i]);
         if (k > 0) {
-          rrect(ctx, x0 + tw + 10, yy, (w - tw - 10) * k, hh - 10, 10, rgba(col, 0.16), rgba(col, 0.7), 1.5);
-          txt(ctx, lab, x0 + tw + 26, yy + 32, { size: 18, weight: 700, color: col, alpha: k });
-          txt(ctx, v.toLocaleString('en-US'), x0 + tw + 26, yy + 58, { size: 18, mono: true, color: COL.text, alpha: k });
+          rrect(ctx, x0 + tw + 6, yy, (w - tw - 6) * k, Math.max(4, hh - 4), 4, rgba(col, 0.75), null);
+          const lx = x0 + 10 + i * 410, ly = y0 + h + 72;
+          rrect(ctx, lx, ly - 18, 18, 18, 4, rgba(col, 0.85 * k), null);
+          txt(ctx, lab, lx + 28, ly - 2, { size: 20, weight: 700, color: col, alpha: k });
+          txt(ctx, v.toLocaleString('en-US'), lx + 28, ly + 26, { size: 20, mono: true, color: COL.text, alpha: k });
         }
         yy += hh;
       });
       const lab = S.p(0, 0.6, 9.5);
       if (lab > 0) {
-        txt(ctx, '302,309,376', x0 + tw / 2, y0 + h + 70, { size: 34, mono: true, weight: 700, align: 'center', color: COL.H, alpha: lab });
-        txt(ctx, '24 × 12,596,224', x0 + tw / 2, y0 + h + 108, { size: 22, mono: true, align: 'center', color: COL.dim, alpha: lab });
+        txt(ctx, '24 layers · 302,309,376  (24 × 12,596,224)', x0 + tw / 2, y0 - 34, { size: 24, mono: true, weight: 700, align: 'center', color: COL.H, alpha: lab });
       }
       const tt = S.p(1, 0.6, 0.5);
       if (tt > 0) {
@@ -165,7 +167,7 @@
           rrect(ctx, x, 780 - hh, 30, hh, 5, i === trueI ? rgba(COL.B, 0.9) : rgba(COL.M, 0.55), null);
         }
       }
-      txt(ctx, '… 88 more distractors', 1730, 430, { size: 22, color: COL.dim, align: 'right', alpha: S.p(1, 0.6, 2.4) * lineup });
+      txt(ctx, '… and 88 more distractors', 1700, 660, { size: 22, color: COL.dim, align: 'right', alpha: S.p(1, 0.6, 2.4) * lineup });
       txt(ctx, 'cosine similarity', 400, 812, { size: 20, color: COL.dim, alpha: S.p(1, 0.6, 4) * lineup });
       const ls = S.p(1, 0.6, 7) * (1 - S.p(2, 0.5, 0));
       if (ls > 0) mtxt(ctx, 'L = −log  exp(sim(c_t, q_t)/{K:0.1}) / Σ exp(sim(c_t, q̃)/{K:0.1})', 960, 880, { size: 30, mono: true, align: 'center', alpha: ls });
@@ -366,7 +368,7 @@
     ],
     hud: S => ({ stage: [0, 2, 5, 6][S.b], shape: ['({B:B}, {T:64600})', RES, RES, RES][S.b] }),
     draw(ctx, S) {
-      const cam = X.world(ctx, S, [[0, -1, { yaw: 0.35, pitch: 0.42, dist: 4200, tx: 200, ty: 150, tz: 0, cx: 1240, cy: 470 }], [3, 0, { yaw: 0.05, pitch: 0.3, dist: 3900 }]], { floorY: -260 });
+      const cam = X.world(ctx, S, [[0, -1, { yaw: 0.3, pitch: 0.4, dist: 6200, tx: -230, ty: 60, tz: 0, cx: 1480, cy: 520 }], [3, 0, { yaw: 0.08, pitch: 0.3, dist: 6000 }]], { floorY: -260 });
       // the pipeline in miniature, behind the table
       const a = 0.85;
       S3.ribbon(ctx, cam, -1500, -1050, 0, 0, 100, { color: COL.T, alpha: a });

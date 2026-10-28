@@ -25,7 +25,7 @@
     id: 'x_intro', chapter: 0, title: 'Introduction', noHeader: true,
     beats: [
       "Welcome. This is X L S R, the speech model with three hundred million parameters that sits at the front of today's strongest voice deepfake detectors. In this video we'll follow the numbers through it, one tensor at a time, from four seconds of raw audio to the features a detector reads.",
-      "X L S R was pre-trained by Meta on about four hundred and thirty-six thousand hours of unlabeled speech, in one hundred and twenty-eight languages. Its three hundred million parameter version stacks twenty-four transformer layers, each one thousand and twenty-four numbers wide, with sixteen attention heads.",
+      "X L S R was pre-trained by Meta on about four hundred and thirty-six thousand hours of unlabeled speech, in one hundred and twenty-eight languages. Under the hood it's a wav2vec 2.0 model, scaled up. Its three hundred million parameter version stacks twenty-four transformer layers, each one thousand and twenty-four numbers wide, with sixteen attention heads.",
       "We'll build every piece from scratch: convolution, normalization, matrix multiplication and attention. And because tensor shapes are where most of the confusion lives, the capsule at the bottom of the screen always shows the shape we're holding right now.",
     ],
     hud: S => S.b >= 2 ? { stage: 0, shape: '({B:B}, {T:64600})' } : null,
@@ -395,7 +395,7 @@
       "Push sixty-four thousand six hundred samples through, using the formula. Layer one gives twelve thousand nine hundred and nineteen frames. Then six thousand four hundred and fifty-nine, three thousand two hundred and twenty-nine, one thousand six hundred and fourteen, eight hundred and six, four hundred and three, and finally two hundred and one.",
       "The channel axis jumps from one to five hundred and twelve in the first layer and stays there. So the encoder outputs B, by five hundred and twelve, by two hundred and one.",
       "Multiply the strides: five, times two to the sixth, is three hundred and twenty samples, or twenty milliseconds. Tracing back through the kernels, each frame sees four hundred samples, twenty-five milliseconds of audio. So frames are twenty-five milliseconds wide and twenty apart, and they overlap slightly.",
-      "Here's where X L S R differs from the original base model. After every convolution comes a layer norm across the five hundred and twelve channels, then a GELU: a smooth activation that passes positive values and squashes negative ones toward zero. The base model only normalized its first layer.",
+      "Here's where X L S R differs from the original wav2vec 2.0 base model. After every convolution comes a layer norm across the five hundred and twelve channels, then a GELU: a smooth activation that passes positive values and squashes negative ones toward zero. The base model only normalized its first layer.",
       "In total the encoder has about four point two one million weights. Its job is purely local. It turns every twenty-five milliseconds of waveform into five hundred and twelve numbers, with no idea yet what came before or after.",
     ],
     hud: S => { const k = S.b === 1 ? clamp(Math.floor((S.T(1) - 2.5) / 1.55) + 1, 0, 7) : S.b >= 2 ? 7 : 0; return { stage: 1, shape: k ? `({B:B}, {C:512}, {T:${ENC[k][0]}})` : '({B:B}, {C:1}, {T:64600})' }; },
@@ -477,7 +477,7 @@
       "Then a linear layer. Each output number is a weighted sum of all the input numbers, plus a bias. Put the weights in a matrix, five hundred and twelve by one thousand and twenty-four, and the whole layer becomes one matrix multiplication: two hundred and one by five hundred and twelve, times five hundred and twelve by one thousand and twenty-four, gives two hundred and one by one thousand and twenty-four. The inner sizes match, and disappear.",
       "One warning. PyTorch stores this weight the other way around, one thousand and twenty-four by five hundred and twelve, and computes x times W transposed, plus b. The layer only touches the last axis; batch and time pass straight through. One thousand and twenty-four is the model width, and it stays fixed until the very end.",
     ],
-    hud: S => ({ stage: 2, shape: ['({B:B}, {T:201}, {C:512})', '({B:B}, {T:201}, {C:512})', '({B:B}, {T:201}, {C:1024})', '({B:B}, {T:201}, {C:1024})'][S.b] }),
+    hud: S => ({ stage: 2, shape: S.b === 0 && S.T(0) < 1.7 ? '({B:B}, {C:512}, {T:201})' : ['({B:B}, {T:201}, {C:512})', '({B:B}, {T:201}, {C:512})', '({B:B}, {T:201}, {C:1024})', '({B:B}, {T:201}, {C:1024})'][S.b] }),
     draw(ctx, S) {
       const mm = S.p(2, 0.8, 0);
       const cam = X.world(ctx, S, [

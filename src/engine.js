@@ -842,8 +842,13 @@
     parseM(shape).forEach(p => {
       if (p[1]) out.push({ pill: true, s: p[0], c: p[1] });
       else {
-        const s = p[0].replace(/[(),]/g, ' ').replace(/\s+/g, ' ').trim();
-        if (s) out.push({ pill: false, s });
+        // plain pieces: bare numbers between commas are dimensions too (neutral pills); words stay text
+        p[0].split(',').forEach(piece => {
+          const s = piece.replace(/[()]/g, ' ').replace(/\s+/g, ' ').trim();
+          if (!s) return;
+          if (/^\d[\d,]*$/.test(s)) out.push({ pill: true, s, c: COL.text });
+          else out.push({ pill: false, s });
+        });
       }
     });
     return out;

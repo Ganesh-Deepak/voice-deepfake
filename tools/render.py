@@ -1,7 +1,7 @@
 """Render an episode to MP4: deterministic frames from the player, plus the soundtrack.
 
     pip install playwright numpy soundfile scipy && playwright install chromium
-    python tools/render.py w2v2 --out out/ep1-wav2vec2.mp4 [--fps 30] [--crf 21] [--from 0 --to 60]
+    python tools/render.py xlsr --out out/ep1-xlsr-300m.mp4 [--fps 30] [--crf 23] [--from 0 --to 60]
 
 Frames come from index.html?render (the same renderAt(t) the web player uses), so the
 video matches the site frame for frame. Audio = narration.mp3 (voice + SFX) + the music

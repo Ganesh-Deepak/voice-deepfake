@@ -3,7 +3,7 @@
     pip install kokoro-onnx soundfile numpy
     # model files: kokoro-v1.0.onnx, voices-v1.0.bin from
     # https://github.com/thewh1teagle/kokoro-onnx/releases/tag/model-files-v1.0
-    python tools/tts.py w2v2 --models <dir> --cache <dir> --wav <out.wav>
+    python tools/tts.py xlsr --models <dir> --cache <dir> --wav <out.wav>
 
 Each sentence is synthesized on its own (cached by text), silences are trimmed, and the
 sentences are laid out with fixed gaps. The timeline stores the caption text, which is the
@@ -31,14 +31,18 @@ TAIL_LAST = 6.0     # room for the end card
 
 # Spoken text -> what the TTS actually reads (pronunciation only).
 SAY = [
+    (r"\bwav2vec 2\.0\b", "wave two vek two point oh"),
+    (r"\bwav2vec2\b", "wave two vek two"),
+    (r"\bwav2vec\b", "wave two vek"),
     (r"\bSwiGLU", "swig-loo"),
     (r"\bRMSNorm\b", "R M S norm"),
     (r"\btanh\b", "tanch"),
     (r"\bASVspoof\b", "ASV spoof"),
     (r"\bGELU\b", "gee-loo"),
-    (r"\bSSL-AASIST\b", "S S L A-sist"),
-    (r"\bA A SIST\b", "A-sist"),
-    (r"\bAASIST\b", "A-sist"),
+    (r"\bSSL-AASIST\b", "S S L A-assist"),
+    (r"\bS S L A A SIST\b", "S S L A-assist"),
+    (r"\bA A SIST\b", "A-assist"),
+    (r"\bAASIST\b", "A-assist"),
     (r"\bH S G A L\b", "H S G eh L"),
     (r"times A, where A is", "times eh, where eh is"),
 ]

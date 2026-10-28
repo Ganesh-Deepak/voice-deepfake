@@ -38,9 +38,9 @@
       txt(ctx, '≈ 50 % of frames hidden', 960, 880, { size: 30, weight: 800, color: COL.M, align: 'center', alpha: S.p(0, 0.6, 9) * (1 - mv) });
       // the learned mask vector m
       if (mv > 0) {
-        S3.block(ctx, cam, { x: 0, y: 380, z: 0, w: 22, h: 220, d: 22, cells: [10, 1, 1], alpha: mv, color: COL.M, glow: COL.M, fn: r => rgba(COL.M, 0.55 + 0.35 * (noise(r, 0, 7) * 0.5 + 0.5)), tags: { h: ['C', 1024] } });
-        S3.caption(ctx, cam, 60, 520, 0, 'one learned vector m', { size: 26, mono: false, weight: 700, color: COL.M, align: 'left', alpha: mv });
-        STARTS.filter((_, i) => i % 2 === 0).forEach((st, i) => S3.path3(ctx, cam, [[0, 270, 20], [-550 + (st + 5) * 11, 160, 32]], { color: COL.M, lw: 2, p: S.l(1, 0.8, 1.5 + i * 0.4), alpha: mv * 0.8, dash: [6, 6] }));
+        S3.block(ctx, cam, { x: 0, y: 330, z: 0, w: 22, h: 170, d: 22, cells: [10, 1, 1], alpha: mv, color: COL.M, glow: COL.M, fn: r => rgba(COL.M, 0.55 + 0.35 * (noise(r, 0, 7) * 0.5 + 0.5)), tags: { h: ['C', 1024] } });
+        S3.caption(ctx, cam, 50, 440, 0, 'one learned vector m', { size: 26, mono: false, weight: 700, color: COL.M, align: 'left', alpha: mv });
+        STARTS.filter((_, i) => i % 2 === 0).forEach((st, i) => S3.path3(ctx, cam, [[0, 245, 20], [-550 + (st + 5) * 11, 160, 32]], { color: COL.M, lw: 2, p: S.l(1, 0.8, 1.5 + i * 0.4), alpha: mv * 0.8, dash: [6, 6] }));
         txt(ctx, 'context on both sides fills the gaps', 960, 860, { size: 26, weight: 700, align: 'center', color: COL.text, alpha: S.p(1, 0.6, 6) });
         txt(ctx, 'fine-tuning: lighter masking (Hugging Face default 7.5 %) as a regularizer', 960, 905, { size: 22, color: COL.dim, align: 'center', alpha: S.p(1, 0.6, 9) });
       }
@@ -107,11 +107,11 @@
         const m = easeIO((S.T(3) - 3.2) / 1.0);
         S3.block(ctx, cam, { x: lerp(-340, 0, m), y: 0, z: 0, w: 520, h: 300, d: 60, cells: [10, 20, 2], seed: 151, alpha: ra, color: THEME.a, tags: m < 0.5 ? { w: ['T', 201], h: ['C', 1024] } : null });
         S3.block(ctx, cam, { x: lerp(340, 0, m), y: lerp(0, 0, m), z: lerp(0, 4, m), w: 520, h: 300, d: 60, cells: [10, 20, 2], seed: 152, alpha: ra * (1 - 0.6 * m), color: COL.K, fn: (r, c, f) => rgba(COL.K, 0.25 + 0.4 * (noise(r + f, c, 152) * 0.5 + 0.5)) });
-        S3.caption(ctx, cam, -340, 230, 0, 'frames', { size: 24, mono: false, weight: 700, alpha: ra * (1 - m) });
-        S3.caption(ctx, cam, 340, 230, 0, 'GELU(pos-conv(frames))', { size: 24, mono: false, weight: 700, color: COL.K, alpha: ra * (1 - m) });
+        S3.caption(ctx, cam, -340, 230, 0, 'frames', { size: 24, mono: false, weight: 700, alpha: ra * clamp(1 - m * 2.5) });
+        S3.caption(ctx, cam, 340, 230, 0, 'GELU(pos-conv(frames))', { size: 24, mono: false, weight: 700, color: COL.K, alpha: ra * clamp(1 - m * 2.5) });
         const pl = cam.p(0, 0, 80);
         if (m > 0.05 && m < 1) txt(ctx, '+', pl[0], pl[1] + 20, { size: 90, weight: 800, align: 'center', color: COL.text, alpha: 1 - m });
-        S3.caption(ctx, cam, 0, 230, 0, RES, { size: 30, alpha: m });
+        S3.caption(ctx, cam, 0, 230, 0, RES, { size: 30, alpha: clamp((m - 0.75) * 4) });
         txt(ctx, 'no LayerNorm here: X L S R normalizes inside each block (pre-norm) and once at the end'.replace('X L S R', 'XLS-R'), 960, 880, { size: 24, weight: 600, align: 'center', color: COL.dim, alpha: S.p(3, 0.6, 5.5) });
       }
     },
@@ -140,18 +140,18 @@
       const card = (x, y, w, h, title, col, a) => { X.card(ctx, x, y, w, h, a); txt(ctx, title, x + w / 2, y + 40, { size: 26, weight: 800, align: 'center', color: col, alpha: a }); };
       // X
       const ax = S.p(0, 0.6, 1);
-      card(ctx, 110, y0, 240, 340, 'X  frames', COL.T, ax);
+      card(110, y0, 240, 340, 'X  frames', COL.T, ax);
       numMat(ctx, 148, y0 + 70, XT, cs, ch, { size: 22, d: 1, alpha: ax });
       // Q, K, V
       [['Q  query', QT, COL.A], ['K  key', KT, COL.K], ['V  value', VT, COL.H]].forEach(([t, M, col], i) => {
         const a = S.p(1, 0.6, 1.2 + i * 1.4);
-        card(ctx, 400 + i * 270, y0, 240, 340, t, col, a);
+        card(400 + i * 270, y0, 240, 340, t, col, a);
         numMat(ctx, 438 + i * 270, y0 + 70, M, cs, ch, { size: 22, d: 2, alpha: a, fill: () => rgba(col, 0.16) });
       });
       // scores 4 x 4 then weights
       const sa = S.p(2, 0.7, 2.6), wa = easeIO((S.T(3) - 5) / 1.0);
       if (sa > 0) {
-        card(ctx, 1220, y0, 430, 340, wa > 0.5 ? 'softmax weights' : 'scores Q·Kᵀ', wa > 0.5 ? COL.B : COL.C, sa);
+        card(1220, y0, 430, 340, wa > 0.5 ? 'softmax weights' : 'scores Q·Kᵀ', wa > 0.5 ? COL.B : COL.C, sa);
         const M = SC.map((r, i) => r.map((v, j) => lerp(v * Math.SQRT2 / (S.b >= 3 && S.T(3) > 2 ? Math.SQRT2 : 1), AT[i][j], wa)));
         numMat(ctx, 1252, y0 + 70, M, 92, ch, { size: 22, d: 2, alpha: sa, cellAlpha: (r, c) => clamp((S.T(2) - 3 - r * 0.5) / 0.4) + (S.b > 2 ? 1 : 0),
           fill: (r, c, v) => wa > 0.5 ? scol(v * 1.4, 0.75) : vcol(v * 0.5, 0.4), hl: (r, c) => S.b === 2 && r === 0 && c === 2 });
@@ -162,7 +162,7 @@
       const sc = S.p(3, 0.6, 0.5) * (1 - S.p(4, 0.4, 0));
       if (sc > 0) {
         mtxt(ctx, 'scale: ÷ √d   ·   toy d = 2  →  ÷ 1.41   ·   XLS-R head d = {H:64}  →  ÷ {H:8}', 960, 680, { size: 30, mono: true, align: 'center', alpha: sc });
-        mtxt(ctx, 'softmax(row) = e^{s} / Σ e^{s}   →   every row sums to 1', 960, 740, { size: 28, mono: true, align: 'center', color: COL.dim, alpha: S.p(3, 0.6, 5) });
+        mtxt(ctx, 'softmax(row) = eˢ / Σ eˢ   →   every row sums to 1', 960, 740, { size: 28, mono: true, align: 'center', color: COL.dim, alpha: S.p(3, 0.6, 5) });
       }
       // output and attention arcs over four frame tokens
       const oa = S.p(4, 0.7, 0.5);
@@ -194,8 +194,8 @@
     hud: S => ({ stage: 5, shape: [RES, S.T(1) > 6 ? '({B:B}, {H:16}, {T:201}, {C:64})' : '({B:B}, {T:201}, {H:16}, {C:64})', '({B:B}, {H:16}, {T:201}, {T:201})', S.T(3) > 5 ? RES : '({B:B}, {H:16}, {T:201}, {C:64})', '({B:B}, {H:16}, {T:201}, {T:201})'][S.b] }),
     draw(ctx, S) {
       const cam = X.world(ctx, S, [
-        [0, -1, { yaw: 0.35, pitch: 0.22, dist: 2100, tx: 0, ty: 30, tz: 0, cx: 960, cy: 520 }], [1, 0, { yaw: 0.62, pitch: 0.26, dist: 2000, tx: 150, tz: -250 }],
-        [2, 0, { yaw: 0.5, pitch: 0.3, dist: 2100, tx: 250, tz: -300 }], [3, 0, { yaw: 0.3, pitch: 0.2, dist: 2200, tx: 100, tz: -200 }], [4, 0, { yaw: 0.05, pitch: 0.12, dist: 2000, tx: 0, tz: 0 }],
+        [0, -1, { yaw: 0.35, pitch: 0.22, dist: 2100, tx: 0, ty: 30, tz: 0, cx: 960, cy: 520 }], [1, 0, { yaw: 0.62, pitch: 0.26, dist: 1450, tx: 120, tz: -300 }],
+        [2, 0, { yaw: 0.5, pitch: 0.3, dist: 1700, tx: 200, tz: -330 }], [3, 0, { yaw: 0.3, pitch: 0.2, dist: 1600, tx: 80, tz: -250 }], [4, 0, { yaw: 0.05, pitch: 0.12, dist: 2000, tx: 0, tz: 0 }],
       ], { floorY: -330 });
       const s1 = S.p(1, 0.6, 0), s4 = S.p(4, 0.6, 0);
       // X -> Q, K, V
@@ -268,7 +268,7 @@
     hud: S => ({ stage: 5, shape: S.b === 2 && S.T(2) > 3 && S.T(2) < 9 ? '({B:B}, {T:201}, {C:4096})' : RES }),
     draw(ctx, S) {
       // the residual stream as a vertical rail with blocks hanging off it
-      const x0 = 330, top = 200, bot = 900;
+      const x0 = 330, top = 200, bot = 900, eqa = 1 - S.p(4, 0.5, 0);
       const ra = S.p(0, 0.8, 0.5);
       ctx.save(); ctx.globalAlpha *= ra;
       const g = ctx.createLinearGradient(0, bot, 0, top); g.addColorStop(0, rgba(THEME.a, 0.9)); g.addColorStop(1, rgba(THEME.b, 0.9));
@@ -277,28 +277,28 @@
       const py = bot - ((S.local * 160) % (bot - top));
       glow(ctx, x0, py, 40, THEME.a, 0.7 * ra);
       txt(ctx, 'residual stream', x0, bot + 46, { size: 22, weight: 700, align: 'center', color: COL.dim, alpha: ra });
-      mtxt(ctx, RES, x0, top - 30, { size: 24, mono: true, align: 'center', alpha: ra });
+      mtxt(ctx, RES, x0 + 40, top - 70, { size: 24, mono: true, align: 'left', alpha: ra });
       const unit = (y, label, col, t0, b) => {
         const a = S.p(b, 0.6, t0);
         if (a <= 0) return;
         arrow(ctx, x0, y + 60, x0 + 100, y + 60, { color: col, alpha: a, p: a });
-        box(ctx, x0 + 110, y + 20, 200, 80, label, { size: 26, color: COL.text, stroke: col, alpha: a });
+        box(ctx, x0 + 110, y + 20, 236, 80, label, { size: 26, color: COL.text, stroke: col, alpha: a });
         return a;
       };
       // attention half
       unit(640, 'LayerNorm', COL.A, 0.5, 1); unit(520, 'Multi-head attn', COL.H, 2, 1);
       const p1 = S.p(1, 0.6, 4.5);
-      if (p1 > 0) { arrow(ctx, x0 + 210, 520, x0 + 20, 470, { color: COL.H, alpha: p1, p: p1 }); chip(ctx, x0, 460, '+', { size: 34, align: 'center', color: COL.text, stroke: COL.H, alpha: p1 }); }
+      if (p1 > 0) { arrow(ctx, x0 + 228, 540, x0 + 20, 470, { color: COL.H, alpha: p1, p: p1 }); chip(ctx, x0, 460, '+', { size: 34, align: 'center', color: COL.text, stroke: COL.H, alpha: p1 }); }
       // feed-forward half
       unit(340, 'LayerNorm', COL.A, 0.5, 2); unit(220, 'Feed-forward', COL.C, 1.5, 2);
       const p2 = S.p(2, 0.6, 10);
-      if (p2 > 0) { arrow(ctx, x0 + 210, 220, x0 + 20, 170, { color: COL.C, alpha: p2, p: p2 }); chip(ctx, x0, 160, '+', { size: 34, align: 'center', color: COL.text, stroke: COL.C, alpha: p2 }); }
-      mtxt(ctx, 'x = x + Attn( LN(x) )', 900, 560, { size: 30, mono: true, alpha: S.p(1, 0.6, 1) });
-      mtxt(ctx, 'x = x + FFN( LN(x) )', 900, 260, { size: 30, mono: true, alpha: S.p(2, 0.6, 1) });
+      if (p2 > 0) { arrow(ctx, x0 + 228, 240, x0 + 20, 170, { color: COL.C, alpha: p2, p: p2 }); chip(ctx, x0, 160, '+', { size: 34, align: 'center', color: COL.text, stroke: COL.C, alpha: p2 }); }
+      mtxt(ctx, 'x = x + Attn( LN(x) )', 700, 560, { size: 30, mono: true, alpha: S.p(1, 0.6, 1) * eqa });
+      mtxt(ctx, 'x = x + FFN( LN(x) )', 700, 260, { size: 30, mono: true, alpha: S.p(2, 0.6, 1) * eqa });
       // FFN in 3-D: 1024 -> 4096 -> 1024 for every frame
       const ff = S.p(2, 0.7, 2.5) * (1 - S.p(4, 0.6, 0));
       if (ff > 0) {
-        const cam = S3.camera({ yaw: 0.45, pitch: 0.2, dist: 2000, tx: 0, ty: 0, tz: 0, cx: 1420, cy: 640 });
+        const cam = S3.camera({ yaw: 0.45, pitch: 0.2, dist: 2100, tx: 0, ty: 0, tz: 0, cx: 1520, cy: 660 });
         const blk = (x, h, c, seed, col, t0) => S3.block(ctx, cam, { x, y: 0, z: 0, w: 150, h, d: 40, cells: [Math.round(h / 26), 6, 2], seed, alpha: ff * S.p(2, 0.6, t0), color: col, tags: { h: ['C', c] } });
         blk(-380, 230, 1024, 181, THEME.a, 2.5); blk(0, 420, 4096, 182, COL.C, 4.5); blk(380, 230, 1024, 183, THEME.a, 7);
         S3.caption(ctx, cam, -190, 250, 0, 'Linear ↑', { size: 22, mono: false, weight: 700, color: COL.C, alpha: ff * S.p(2, 0.6, 4.5) });
@@ -352,7 +352,7 @@
         const bx = lerp(-1080, 720, fly) + (S.b >= 1 ? lerp(0, 220, S.p(1, 0.8, 0.5)) : 0);
         S3.block(ctx, cam, { x: bx, y: 0, z: 0, w: 60, h: 300, d: 120, cells: [12, 3, 4], seed: 191, alpha: st, color: THEME.a, glow: THEME.a, tags: { h: ['C', 1024], d: ['T', 201] } });
         if (fly > 0 && fly < 1) txt(ctx, `layer ${cur + 1} / 24`, 960, 860, { size: 34, weight: 800, mono: true, align: 'center', color: THEME.a, alpha: st });
-        S3.caption(ctx, cam, layerX(11.5), 260, 0, '≈ 302 M weights · 96 % of the model', { size: 26, mono: false, weight: 700, color: COL.text, alpha: S.p(0, 0.6, 4) * st });
+        S3.caption(ctx, cam, layerX(11.5), 260, 0, '≈ 302 M weights · 96 % of the model', { size: 26, mono: false, weight: 700, color: COL.text, alpha: S.p(0, 0.6, 4) * st * (1 - S.p(1, 0.5, 0)) });
         // final layer norm
         const fl = S.p(1, 0.6, 0) * st;
         S3.gate(ctx, cam, 820, 0, 0, 400, 240, { color: COL.A, alpha: fl, fill: 0.1, label: 'final LayerNorm' });
