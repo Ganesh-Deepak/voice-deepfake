@@ -145,7 +145,7 @@
   <header class="mast">
     <div>
       <h1>Deepfake detectors, <em>shape by shape</em></h1>
-      <p>Three animated explainers that follow the tensors through the models behind modern voice-deepfake detection, one operation at a time.</p>
+      <p>Three animated explainers that follow the tensors through XLS-R 300M and the two back-ends built on it, one operation at a time.</p>
     </div>
     <div class="meta"><span id="total">3 episodes</span><a href="https://github.com/Ganesh-Deepak/voice-deepfake" target="_blank" rel="noopener">source &amp; verification scripts</a></div>
   </header>
@@ -186,11 +186,11 @@
 
   <footer class="credits">
     <div><h3>Papers</h3>
-      <p>Baevski et al., <a href="https://arxiv.org/abs/2006.11477" target="_blank" rel="noopener">wav2vec 2.0</a>, NeurIPS 2020.</p>
+      <p>Babu et al., <a href="https://arxiv.org/abs/2111.09296" target="_blank" rel="noopener">XLS-R</a>, Interspeech 2022 · Baevski et al., <a href="https://arxiv.org/abs/2006.11477" target="_blank" rel="noopener">wav2vec 2.0</a>, NeurIPS 2020.</p>
       <p>Jung et al., <a href="https://arxiv.org/abs/2110.01200" target="_blank" rel="noopener">AASIST</a>, ICASSP 2022 · Tak et al., <a href="https://arxiv.org/abs/2202.12233" target="_blank" rel="noopener">SSL-AASIST</a>, Odyssey 2022.</p>
       <p>Ng et al., <a href="https://arxiv.org/abs/2601.02944" target="_blank" rel="noopener">XLSR-MamBo</a>, Findings of ACL 2026.</p></div>
     <div><h3>How the numbers were checked</h3>
-      <p>Every shape and parameter count on screen was traced in PyTorch: Hugging Face <span style="font-family:var(--font-mono)">Wav2Vec2Model</span>, the SSL-AASIST authors' back-end, and a CPU replica of the official XLSR-MamBo code. The scripts are in the repository's <span style="font-family:var(--font-mono)">verify/</span> folder.</p></div>
+      <p>Every shape and parameter count on screen was traced in PyTorch: Hugging Face <span style="font-family:var(--font-mono)">Wav2Vec2Model</span> built from the XLS-R 300M config, the SSL-AASIST authors' back-end, and a CPU replica of the official XLSR-MamBo code. The scripts are in the repository's <span style="font-family:var(--font-mono)">verify/</span> folder.</p></div>
     <div><h3>Making of</h3>
       <p>Deterministic canvas animation, narrated with Kokoro (af_heart). Motion follows HyperFrames' motion doctrine and the motion-graphic skill's springs; music and sound effects are synthesized in <span style="font-family:var(--font-mono)">tools/sound.py</span>.</p></div>
   </footer>
@@ -198,11 +198,11 @@
 
 <script>
 const VIDEOS = [
-  { id: 'w2v2', n: 1, name: 'wav2vec 2.0', desc: 'From raw audio to context vectors: convolution, projection, attention.', files: ['scenes1.js', 'scenes2.js', 'scenes3.js'], color: '#39d0d8', color2: '#5b7cff' },
+  { id: 'xlsr', n: 1, name: 'XLS-R 300M', desc: 'The 24-layer front end: waveform to 201 context vectors, every tensor in 3-D.', files: ['scenes1.js', 'scenes2.js', 'scenes3.js'], color: '#38d9f5', color2: '#7c6cff' },
   { id: 'aasist', n: 2, name: 'AASIST back-end', desc: 'Features as an image, two node sets, and heterogeneous graph attention.', files: ['scenes.js'], color: '#2dd4bf', color2: '#b78cff' },
   { id: 'mambo', n: 3, name: 'XLSR-MamBo', desc: 'Bidirectional state space models (Hydra) mixed with attention.', files: ['scenes.js'], color: '#f2cc60', color2: '#c792ea' },
 ];
-const RUNTIME = { w2v2: '28 min', aasist: '16 min', mambo: '15 min' };
+const RUNTIME = { xlsr: '24 min', aasist: '16 min', mambo: '15 min' };
 function loadScript(src) {
   return new Promise(res => { const el = document.createElement('script'); el.src = src; el.onload = res; el.onerror = res; document.head.appendChild(el); });
 }
@@ -218,6 +218,7 @@ const store = {
   root.setProperty('--signal', vid.color); root.setProperty('--signal-2', vid.color2);
   await loadScript('videos/' + vid.id + '/config.js');
   await loadScript('src/engine.js');
+  await loadScript('src/space.js');
   for (const f of vid.files) await loadScript('videos/' + vid.id + '/' + f);
   await loadScript('build/' + vid.id + '/timeline.js');
   const RENDER = params.has('render');

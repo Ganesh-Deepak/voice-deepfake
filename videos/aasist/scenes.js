@@ -31,7 +31,7 @@
   S_.push({
     id: 'a_intro', chapter: 0, title: 'Introduction', noHeader: true,
     beats: [
-      "In the previous video we followed wav2vec 2.0 from raw audio to a sequence of context vectors. Now we'll follow those vectors into AASIST, the graph attention back-end used by many of the strongest spoofing detectors.",
+      "In the previous video we followed X L S R from raw audio to a sequence of context vectors. Now we'll follow those vectors into AASIST, the graph attention back-end used by many of the strongest spoofing detectors.",
       "AASIST was introduced by Jung and colleagues in 2022. Tak and colleagues then put it on top of the X L S R front-end. That combination, usually called SSL-AASIST, is what we'll trace, using the exact shapes from the authors' own code.",
       "As before, the bar at the bottom always shows the shape we're holding. There are two new axes this time: teal F, for the feature rows that AASIST treats like frequency, and purple N, for graph nodes.",
     ],

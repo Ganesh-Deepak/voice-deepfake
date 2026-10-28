@@ -653,17 +653,19 @@
     bgBase = mk(W, H);
     let g = bgBase.getContext('2d');
     const grd = g.createRadialGradient(W * 0.5, H * 0.42, 80, W * 0.5, H * 0.5, W * 0.78);
-    grd.addColorStop(0, '#0f1626'); grd.addColorStop(0.55, '#0a0f1a'); grd.addColorStop(1, '#05070c');
+    grd.addColorStop(0, '#111a33'); grd.addColorStop(0.5, '#0a1024'); grd.addColorStop(1, '#04060e');
     g.fillStyle = grd; g.fillRect(0, 0, W, H);
-    bgGrid = mk(W + 48, H + 48);
-    g = bgGrid.getContext('2d');
-    for (let x = 0; x < W + 48; x += 48) for (let y = 0; y < H + 48; y += 48) {
-      g.fillStyle = (x / 48 + y / 48) % 4 === 0 ? 'rgba(140,165,200,0.11)' : 'rgba(120,140,170,0.06)';
-      g.fillRect(x + 23, y + 23, 2, 2);
-    }
-    g.strokeStyle = 'rgba(120,140,170,0.025)'; g.lineWidth = 1;
-    for (let x = 0; x < W + 48; x += 192) { g.beginPath(); g.moveTo(x + 24, 0); g.lineTo(x + 24, H + 48); g.stroke(); }
-    for (let y = 0; y < H + 48; y += 192) { g.beginPath(); g.moveTo(0, y + 24); g.lineTo(W + 48, y + 24); g.stroke(); }
+    // three star layers (far, mid, near) that drift at different speeds: parallax depth
+    bgGrid = [0, 1, 2].map(L => {
+      const c = mk(W + 512, H), g2 = c.getContext('2d'), rnd = mulberry32(70 + L), n = [520, 220, 70][L];
+      for (let i = 0; i < n; i++) {
+        const x = rnd() * (W + 512), y = rnd() * H, r = [0.6, 1.0, 1.6][L] * (0.6 + rnd() * 0.8), al = [0.35, 0.5, 0.7][L] * (0.4 + rnd() * 0.6);
+        g2.fillStyle = rnd() > 0.82 ? `rgba(160,200,255,${al})` : `rgba(220,230,255,${al})`;
+        g2.beginPath(); g2.arc(x, y, r, 0, 7); g2.fill();
+        if (L === 2 && rnd() > 0.6) { const gg = g2.createRadialGradient(x, y, 0, x, y, 9); gg.addColorStop(0, `rgba(170,210,255,${al * 0.35})`); gg.addColorStop(1, 'rgba(0,0,0,0)'); g2.fillStyle = gg; g2.fillRect(x - 9, y - 9, 18, 18); }
+      }
+      return c;
+    });
     bgVig = mk(W, H);
     g = bgVig.getContext('2d');
     const v = g.createRadialGradient(W / 2, H / 2, H * 0.42, W / 2, H / 2, W * 0.72);
@@ -687,12 +689,11 @@
       const x = W * (0.5 + 0.38 * Math.cos(ph + i)), y = H * (0.48 + 0.3 * Math.sin(ph * 0.8 + i * 1.7));
       const r = 760 + 140 * Math.sin(ph * 0.7);
       const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-      g.addColorStop(0, rgba(cols[i], 0.075)); g.addColorStop(0.5, rgba(cols[i], 0.03)); g.addColorStop(1, rgba(cols[i], 0));
+      g.addColorStop(0, rgba(cols[i], 0.10)); g.addColorStop(0.5, rgba(cols[i], 0.035)); g.addColorStop(1, rgba(cols[i], 0));
       ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
     }
     ctx.restore();
-    const ox = -((t * 6) % 48), oy = -((t * 2.5) % 48);
-    ctx.drawImage(bgGrid, ox - 24 + 24, oy);
+    [3, 7, 14].forEach((v, L) => { const ox = -((t * v) % 512); ctx.drawImage(bgGrid[L], ox, 0); });
   }
   function overlay(ctx, t) {
     ctx.drawImage(bgVig, 0, 0);
@@ -835,56 +836,95 @@
     for (let k = 0; k < HUDS.length; k++) { if (HUDS[k].t <= t + 1e-6) i = k; else break; }
     return i;
   }
+  // shape markup -> pills: '({B:B}, {T:201}, {C:1024})' becomes B × 201 × 1024 in axis colours
+  function shapeParts(shape) {
+    const out = [];
+    parseM(shape).forEach(p => {
+      if (p[1]) out.push({ pill: true, s: p[0], c: p[1] });
+      else {
+        const s = p[0].replace(/[(),]/g, ' ').replace(/\s+/g, ' ').trim();
+        if (s) out.push({ pill: false, s });
+      }
+    });
+    return out;
+  }
+  function drawShape(ctx, shape, right, y, alpha) {
+    const parts = shapeParts(shape);
+    ctx.save(); ctx.globalAlpha *= alpha;
+    ctx.font = font(28, 700, true);
+    const items = [];
+    parts.forEach((p, i) => {
+      if (i && p.pill && parts[i - 1].pill) items.push({ sep: true, w: 26 });
+      ctx.font = p.pill ? font(28, 700, true) : font(20, 600);
+      items.push(Object.assign({ w: ctx.measureText(p.s).width + (p.pill ? 24 : 12) }, p));
+    });
+    const total = items.reduce((a, b) => a + b.w + 4, 0);
+    let x = right - total;
+    items.forEach(it => {
+      if (it.sep) { ctx.font = font(22, 600); ctx.fillStyle = COL.faint; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('×', x + it.w / 2, y + 1); }
+      else if (it.pill) {
+        rrect(ctx, x, y - 21, it.w, 42, 11, rgba(it.c, 0.16), rgba(it.c, 0.55), 1.5);
+        ctx.font = font(28, 700, true); ctx.fillStyle = it.c; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(it.s, x + it.w / 2, y + 1);
+      } else { ctx.font = font(20, 600); ctx.fillStyle = COL.dim; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(it.s, x + it.w / 2, y + 1); }
+      x += it.w + 4;
+    });
+    ctx.restore();
+    return total;
+  }
   function hud(ctx, t) {
     if (!HUDS) prepHud(ctx);
     const i = hudState(t), cur = HUDS[i];
-    // visibility track
     const vis = track(t, HUDS.map(k => [k.t, k.h ? 1 : 0]), 170, 26);
     if (vis <= 0.01) return;
     const h = cur.h || (HUDS.slice(0, i).reverse().find(k => k.h) || {}).h;
     if (!h) return;
-    const y0 = 1000;
+    const y0 = 994, x0 = 40, w = W - 80, hh = 70;
     ctx.save();
     ctx.globalAlpha *= clamp(vis);
-    ctx.translate(0, (1 - clamp(vis)) * 40);
-    // glass panel
-    softShadow(ctx, 40, y0, W - 80, 64, 14);
-    const g = ctx.createLinearGradient(0, y0, 0, y0 + 64);
-    g.addColorStop(0, 'rgba(24,33,50,0.94)'); g.addColorStop(1, 'rgba(14,20,31,0.94)');
-    rrect(ctx, 40, y0, W - 80, 64, 14, g, COL.line, 2);
-    ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fillRect(54, y0 + 1, W - 108, 1);
-    // stage indicator: stiff leading edge + softer trailing edge (stretches while it travels)
+    ctx.translate(0, (1 - clamp(vis)) * 50);
+    // floating glass capsule
+    softShadow(ctx, x0, y0, w, hh, 35);
+    const g = ctx.createLinearGradient(0, y0, 0, y0 + hh);
+    g.addColorStop(0, 'rgba(26,34,58,0.90)'); g.addColorStop(1, 'rgba(12,17,32,0.90)');
+    rrect(ctx, x0, y0, w, hh, 35, g, 'rgba(140,165,215,0.22)', 1.5);
+    const sh = ctx.createLinearGradient(x0, 0, x0 + w, 0);
+    sh.addColorStop(0, rgba(THEME.a, 0)); sh.addColorStop(0.3, rgba(THEME.a, 0.35)); sh.addColorStop(0.7, rgba(THEME.b, 0.35)); sh.addColorStop(1, rgba(THEME.b, 0));
+    ctx.fillStyle = sh; ctx.fillRect(x0 + 40, y0, w - 80, 1.5);
+    const cy = y0 + hh / 2;
+    // stage meter: one segment per stage; past ones filled, the current one lit and labelled
+    const n = STAGES.length, segW = Math.min(64, 560 / n), gap = 6, sx = x0 + 34;
     const keys = [];
     HUDS.forEach(k => { if (k.h && k.h.stage != null && (!keys.length || keys[keys.length - 1][1] !== k.h.stage)) keys.push([k.t, k.h.stage]); });
-    if (h.stage != null && keys.length) {
-      const L = keys.map(([tt, st]) => [tt, STAGE_X[st][0]]), R = keys.map(([tt, st]) => [tt, STAGE_X[st][0] + STAGE_X[st][1]]);
-      const lead = track(t, L, 320, 28), trail = track(t, L, 120, 20);
-      const leadR = track(t, R, 320, 28), trailR = track(t, R, 120, 20);
-      const left = Math.min(lead, trail), right = Math.max(leadR, trailR);
-      rrect(ctx, left, y0 + 16, right - left, 32, 16, rgba(THEME.a, 0.18), THEME.a, 2);
-      glow(ctx, (left + right) / 2, y0 + 32, (right - left) * 0.7, THEME.a, 0.25);
+    const st = h.stage != null && keys.length ? track(t, keys, 220, 24) : -1;
+    for (let k = 0; k < n; k++) {
+      const x = sx + k * (segW + gap), f = clamp(st - k + 1);
+      rrect(ctx, x, cy - 4, segW, 8, 4, 'rgba(120,140,180,0.18)', null);
+      if (f > 0) rrect(ctx, x, cy - 4, segW * f, 8, 4, k === Math.round(st) ? THEME.a : rgba(THEME.a, 0.45), null);
     }
-    STAGES.forEach((st, k) => {
-      const [x, w] = STAGE_X[k];
-      const active = k === h.stage, past = h.stage != null && k < h.stage;
-      txt(ctx, st, x + w / 2, y0 + 33, { size: 20, weight: 600, align: 'center', base: 'middle', color: active ? THEME.a : past ? COL.dim : COL.faint });
-      if (k < STAGES.length - 1) txt(ctx, '›', x + w + 8, y0 + 33, { size: 24, weight: 600, base: 'middle', color: COL.faint });
-    });
-    // shape readout: rolls up when it changes
+    if (st >= 0) {
+      const ax = sx + st * (segW + gap) + segW / 2;
+      glow(ctx, ax, cy, 40, THEME.a, 0.55);
+      const k = Math.round(st), name = STAGES[clamp(k, 0, n - 1)];
+      const lx = sx + n * (segW + gap) + 18;
+      txt(ctx, `${String(k + 1).padStart(2, '0')}/${String(n).padStart(2, '0')}`, lx, cy + 1, { size: 18, weight: 600, mono: true, base: 'middle', color: COL.faint });
+      // stage name rolls when it changes
+      const kt = keys.filter(q => q[0] <= t + 1e-6).pop(), e = kt ? easeOut4(clamp((t - kt[0]) / 0.4)) : 1;
+      ctx.save(); ctx.beginPath(); ctx.rect(lx + 70, cy - 26, 460, 52); ctx.clip();
+      txt(ctx, name, lx + 76, cy + 1 + (1 - e) * 30, { size: 26, weight: 700, base: 'middle', color: COL.text, alpha: e });
+      ctx.restore();
+    }
+    // shape pills (roll up when the shape changes)
     if (h.shape) {
       const tc = cur.t, prevH = (HUDS.slice(0, i).reverse().find(k => k.h && k.h.shape) || {}).h;
       const e = prevH && prevH.shape !== h.shape ? easeOut4(clamp((t - tc) / 0.45)) : 1;
-      const right = W - 70;
-      const sw = Math.max(360, mwidth(ctx, h.shape, { size: 32, mono: true }));
-      txt(ctx, h.label || 'tensor shape', right - sw - 20, y0 + 34, { size: 18, weight: 600, color: COL.dim, align: 'right', base: 'middle' });
-      ctx.save();
-      ctx.beginPath(); ctx.rect(right - sw - 10, y0 + 6, sw + 20, 52); ctx.clip();
-      if (e < 1) {
-        mtxt(ctx, prevH.shape, right, y0 + 34 - e * 40, { size: 32, mono: true, align: 'right', base: 'middle', color: COL.dim, alpha: 1 - e });
-        glow(ctx, right - sw / 2, y0 + 32, sw * 0.5, THEME.a, 0.35 * (1 - e));
-      }
-      mtxt(ctx, h.shape, right, y0 + 34 + (1 - e) * 40, { size: 32, mono: true, align: 'right', base: 'middle', color: COL.dim, alpha: e });
+      const right = x0 + w - 30;
+      ctx.save(); ctx.beginPath(); ctx.rect(x0 + 700, y0 + 4, w - 720, hh - 8); ctx.clip();
+      let sw = 0;
+      if (e < 1) { ctx.save(); ctx.translate(0, -e * 44); drawShape(ctx, prevH.shape, right, cy, 1 - e); ctx.restore(); }
+      ctx.save(); ctx.translate(0, (1 - e) * 44); sw = drawShape(ctx, h.shape, right, cy, e); ctx.restore();
+      if (e < 1) glow(ctx, right - sw / 2, cy, sw * 0.6, THEME.a, 0.35 * (1 - e));
       ctx.restore();
+      txt(ctx, (h.label || 'tensor shape').toUpperCase(), right - sw - 18, cy + 1, { size: 15, weight: 700, mono: true, align: 'right', base: 'middle', color: COL.faint });
     }
     ctx.restore();
   }

@@ -24,7 +24,7 @@
   S_.push({
     id: 'm_intro', chapter: 0, title: 'Introduction', noHeader: true,
     beats: [
-      "This is the third video in the series. We've followed wav2vec 2.0, and the graph-based AASIST back-end. Now we'll trace XLSR-MamBo, a back-end built from state space models and attention.",
+      "This is the third video in the series. We've followed X L S R, and the graph-based AASIST back-end. Now we'll trace XLSR-MamBo, a back-end built from state space models and attention.",
       "XLSR-MamBo was published by Ng and colleagues in the Findings of ACL 2026. We'll follow its best configuration: MamBo three, Hydra, N three. The official code needs GPU kernels, so we rebuilt it in plain PyTorch to trace every shape. The rebuilt model's parameter count matches the paper exactly.",
       "There are some new axes this time. Yellow S, for the state size of the state space model. Lavender E, for the expanded inner width. Purple H, for heads, and pink P, for the size of each head.",
     ],
@@ -784,7 +784,7 @@
       const C = S.p(3);
       if (C > 0) {
         ctx.save(); ctx.globalAlpha = C;
-        const cols = [['wav2vec 2.0 base', 'front-end', '12-layer transformer', '94.4 M', '(B, 49, 768) per second', COL.A],
+        const cols = [['XLS-R 300M', 'front-end', '24-layer transformer', '315.4 M', '(B, 201, 1024) per 4 s', COL.A],
           ['AASIST (SSL)', 'back-end', 'image → nodes → graph attention', '447 K', '(B, 201, 1024) → (B, 2)', COL.H],
           ['MamBo-3-Hydra-N3', 'back-end', 'Hydra SSM + attention', '3.93 M', '(B, 208, 1024) → (B, 2)', COL.M]];
         cols.forEach((c, i) => {
