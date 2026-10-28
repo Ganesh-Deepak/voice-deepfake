@@ -255,7 +255,7 @@
         S3.block(ctx, cam, { x: -300, y: -560, z: 0, w: 236, h: 300 * 0.5, d: 60, cells: [6, 9, 2], seed: 264, alpha: S.p(2, 0.6, 2) * sc, color: COL.S, tags: { w: ['T', 208], h: ['C', 1024] } });
         S3.caption(ctx, cam, -300, -440, 0, '66,800 samples → 208 frames', { size: 22, mono: false, weight: 700, color: COL.S, alpha: S.p(2, 0.6, 2) * sc });
         const sp = cam.p(80, -560, 0), sk = S.p(2, 0.6, 4);
-        for (let i = 0; i < 12; i++) { const f = Math.exp(-(((S.local * 4) % 14) - i) ** 2 / 4); rrect(ctx, sp[0] - 120 + i * 22, sp[1] - 18, 18, 36, 4, rgba(COL.S, (0.2 + 0.7 * f) * sk), null); }
+        for (let i = 0; i < 12; i++) { const f = Math.exp(-((((S.local * 4) % 14) - i) ** 2) / 4); rrect(ctx, sp[0] - 120 + i * 22, sp[1] - 18, 18, 36, 4, rgba(COL.S, (0.2 + 0.7 * f) * sk), null); }
         chip(ctx, sp[0] + 280, sp[1], 'Episode 3 · MamBo', { size: 26, color: COL.S, stroke: COL.S, fill: rgba(COL.S, 0.1), alpha: S.p(2, 0.6, 5) * sc });
       }
       // training card
