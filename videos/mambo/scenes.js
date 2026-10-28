@@ -25,31 +25,61 @@
     id: 'm_intro', chapter: 0, title: 'Introduction', noHeader: true,
     beats: [
       "This is the third video in the series. We've followed wav2vec 2.0, and the graph-based AASIST back-end. Now we'll trace XLSR-MamBo, a back-end built from state space models and attention.",
-      "XLSR-MamBo was published by Ng and colleagues at ACL 2026. We'll follow its best configuration: MamBo three, Hydra, N three. The official code needs GPU kernels, so we rebuilt it in plain PyTorch to trace every shape. The rebuilt model's parameter count matches the paper exactly.",
+      "XLSR-MamBo was published by Ng and colleagues in the Findings of ACL 2026. We'll follow its best configuration: MamBo three, Hydra, N three. The official code needs GPU kernels, so we rebuilt it in plain PyTorch to trace every shape. The rebuilt model's parameter count matches the paper exactly.",
       "There are some new axes this time. Yellow S, for the state size of the state space model. Lavender E, for the expanded inner width. Purple H, for heads, and pink P, for the size of each head.",
     ],
     hud: S => S.b >= 2 ? { stage: 0, shape: '({B:B}, {T:208}, {C:1024})' } : null,
     draw(ctx, S) {
-      const a0 = S.p(0, 1.2);
-      for (let k = 0; k < 3; k++) {
-        const y = 560 + k * 26;
-        for (let i = 0; i < 48; i++) {
-          const x = 180 + i * 33, v = Math.exp(-((i - 24 - 10 * Math.sin(S.t * 0.3 + k)) ** 2) / 80);
-          rrect(ctx, x, y, 26, 18, 4, rgba(k === 1 ? COL.M : COL.T, (0.1 + 0.5 * v) * a0), null);
-        }
+      // cold open: a forward scan, a backward scan (Hydra), then attention links distant frames
+      const T = S.T(0), x0 = 150, x1 = 1770, n = 36, tw = (x1 - x0) / n, cy = 700;
+      E.kicker(ctx, 'DEEPFAKE DETECTORS · SHAPE BY SHAPE', x0 + 4, 214, T + 0.9);
+      chip(ctx, x0 + 600, 206, 'EPISODE 3 / 3', { size: 20, mono: true, color: E.THEME.a, stroke: rgba(E.THEME.a, 0.6), fill: rgba(E.THEME.a, 0.08), alpha: S.p(0, 0.5, 0.2) });
+      E.titleRise(ctx, 'XLSR-MamBo', x0, 400, T + 0.6, { size: 150 });
+      txt(ctx, 'state space models + attention, shape by shape', x0 + 6, 470, { size: 38, weight: 500, color: COL.dim, alpha: S.p(0, 0.9, 0.5) });
+      const so = 1 - S.p(2, 0.5, 0.6);
+      [[3.93, 2, ' M', 'back-end parameters'], [30, 0, '', 'blocks, one shape'], [0.81, 2, ' %', 'EER, ASVspoof 2021 LA']].forEach(([v, d, suf, lab], i) => {
+        const t0 = 8.8 + i * 0.8, y = 250 + i * 112;
+        E.countUp(ctx, v, d, x1, y, T - t0, { size: 56, suf, align: 'right', color: i === 0 ? E.THEME.a : COL.text, alpha: so });
+        txt(ctx, lab, x1, y + 34, { size: 22, weight: 600, color: COL.dim, align: 'right', alpha: S.p(0, 0.5, t0 + 0.2) * so });
+      });
+      // scans: the head carries a state that fades with distance (decay)
+      const fw = clamp((T - 2.0) / 3.0) * (n + 6) - 3, bw = n + 3 - clamp((T - 5.2) / 3.0) * (n + 6);
+      const att = S.l(0, 1.4, 8.6);
+      for (let i = 0; i < n; i++) {
+        const k = E.easeOut4((T - 0.3 - i * 0.03) / 0.4);
+        if (k <= 0) continue;
+        const x = x0 + i * tw + 3, w = tw - 6, y = cy - 30 + (1 - k) * 30;
+        const f = i <= fw ? Math.exp(-(fw - i) / 7) : 0, b = T > 5.2 && i >= bw ? Math.exp(-(i - bw) / 7) : 0;
+        const fDone = T > 5.0 ? 0.55 : 0, bDone = T > 8.2 ? 0.55 : 0;
+        rrect(ctx, x, y, w, 60, 7, rgba('#1a2435', k), rgba('#3a4860', k), 1.5);
+        const ff = Math.max(f, i <= fw ? fDone : 0), bb = Math.max(b, i >= bw && T > 5.2 ? bDone : 0);
+        if (ff > 0) rrect(ctx, x, y, w, 30, 7, rgba(E.THEME.a, 0.85 * ff * k), null);
+        if (bb > 0) rrect(ctx, x, y + 30, w, 30, 7, rgba(E.THEME.b, 0.85 * bb * k), null);
       }
-      txt(ctx, 'XLSR-MamBo', W / 2, 400, { size: 124, weight: 800, align: 'center', alpha: a0 });
-      txt(ctx, 'state space models + attention, shape by shape', W / 2, 475, { size: 40, weight: 500, align: 'center', color: COL.dim, alpha: S.p(0, 1, 0.6) });
-      const a1 = S.p(1, 0.8, 1);
-      mtxt(ctx, 'MamBo-3-{M:Hydra}-N3  ·  Ng et al., ACL 2026 Findings', W / 2, 740, { size: 32, align: 'center', alpha: a1, weight: 600 });
-      mtxt(ctx, 'replica parameters {K:319,373,323}  =  paper 319.37 M', W / 2, 790, { size: 26, align: 'center', alpha: S.p(1, 0.6, 9), mono: true });
+      if (T > 2.0 && fw < n + 2) E.penTip(ctx, x0 + clamp(fw + 0.5, 0, n) * tw, cy - 15, E.THEME.a);
+      if (T > 5.2 && bw > -2) E.penTip(ctx, x0 + clamp(bw + 0.5, 0, n) * tw, cy + 15, E.THEME.b);
+      txt(ctx, 'forward scan  →', x0, cy + 74, { size: 24, weight: 700, color: E.THEME.a, alpha: S.p(0, 0.5, 2.0) });
+      txt(ctx, '←  backward scan', x1, cy + 74, { size: 24, weight: 700, color: E.THEME.b, align: 'right', alpha: S.p(0, 0.5, 5.2) });
+      // attention: arcs between distant frames
+      [[3, 29], [8, 21], [12, 33], [17, 26], [5, 14]].forEach(([a, b], j) => {
+        const k = clamp(att * 1.6 - j * 0.15);
+        if (k <= 0) return;
+        const xa = x0 + (a + 0.5) * tw, xb = x0 + (b + 0.5) * tw, hgt = 40 + (b - a) * 5;
+        ctx.save(); ctx.strokeStyle = rgba(COL.H, 0.8); ctx.lineWidth = 2.4; ctx.setLineDash([2000 * k, 4000]);
+        ctx.beginPath(); ctx.moveTo(xa, cy - 34); ctx.quadraticCurveTo((xa + xb) / 2, cy - 34 - hgt * 2, xb, cy - 34); ctx.stroke(); ctx.restore();
+      });
+      txt(ctx, '+ attention links distant frames', W / 2, cy + 74, { size: 24, weight: 700, color: COL.H, align: 'center', alpha: S.p(0, 0.5, 8.8) });
+      // the paper and the replica
+      const out = 1 - S.p(2, 0.5, 0);
+      mtxt(ctx, 'MamBo-3-{M:Hydra}-N3  ·  Ng et al., ACL 2026 Findings', x0, 940, { size: 30, alpha: S.p(1, 0.8, 1) * out, weight: 600 });
+      mtxt(ctx, 'replica parameters {K:319,373,323}  =  paper 319.37 M', x1, 940, { size: 24, align: 'right', alpha: S.p(1, 0.6, 9) * out, mono: true });
       const a2 = S.p(2, 0.6, 1.5);
       if (a2 > 0) {
         [['S', 'state size', COL.S], ['E', 'inner width', COL.E], ['H', 'heads', COL.H], ['P', 'head size', COL.D]].forEach((l, i) => {
-          const x = 330 + i * 330, a = a2 * S.p(2, 0.5, 1.5 + i * 1.6);
-          rrect(ctx, x, 870, 60, 60, 12, rgba(l[2], 0.15 * a), rgba(l[2], a), 3);
-          txt(ctx, l[0], x + 30, 902, { size: 34, weight: 800, align: 'center', base: 'middle', color: l[2], alpha: a });
-          txt(ctx, l[1], x + 80, 910, { size: 26, weight: 600, alpha: a });
+          const x = 1330, y = 210 + i * 78, a = a2 * S.p(2, 0.5, 1.5 + i * 1.6);
+          rrect(ctx, x, y, 54, 54, 12, rgba(l[2], 0.15 * a), rgba(l[2], a), 3);
+          txt(ctx, l[0], x + 27, y + 29, { size: 30, weight: 800, align: 'center', base: 'middle', color: l[2], alpha: a });
+          txt(ctx, l[1], x + 74, y + 36, { size: 26, weight: 600, alpha: a });
         });
       }
     },
@@ -450,7 +480,7 @@
       "A single linear layer, in proj, maps one hundred and twenty-eight to seven hundred and seventy-six numbers per frame. They're split into three parts. z: two hundred and fifty-six numbers, for the output gate. x B C: five hundred and twelve numbers. And delta: eight numbers, four heads for each direction.",
       "The x B C part goes through a depthwise convolution along time, seven frames wide, and a SiLU. Depthwise means each of the five hundred and twelve channels has its own small kernel. Then it's split: x is two hundred and fifty-six numbers, and the other two hundred and fifty-six hold B and C for the forward and backward scans, sixty-four each.",
       "The forward and flipped copies are stacked on the batch axis, so x becomes two B by two hundred and eight by two hundred and fifty-six. It's viewed as four heads of sixty-four: two B, by two hundred and eight, by four, by sixty-four. B and C are two B by two hundred and eight by sixty-four, shared by all heads.",
-      "The scan returns the same shape. The backward half is flipped back and added to the forward half, and the D term adds x times a learned gain for each head. We're back to B by two hundred and eight by two hundred and fifty-six.",
+      "The scan returns the same shape. The backward half is flipped back and added to the forward half, and the D term adds x back in, scaled by a gain for each head that is itself computed from x. We're back to B by two hundred and eight by two hundred and fifty-six.",
       "Finally, a gated RMSNorm: normalize, then multiply by SiLU of z. And out proj maps two hundred and fifty-six back to one hundred and twenty-eight. One Hydra block has about one hundred and thirty-eight thousand parameters, most of them in the two projections.",
     ],
     hud: S => ({ stage: 2, shape: [RES, '({B:B}, {T:208}, 776)', '({B:B}, {T:208}, 512)', '({B:2B}, {T:208}, {H:4}, {D:64})', '({B:B}, {T:208}, {E:256})', RES][S.b] }),
@@ -509,7 +539,7 @@
         arrow(ctx, 1110, cy, 1220, cy, {}); txt(ctx, 'Linear', 1165, cy - 20, { size: 20, align: 'center', color: COL.K });
         bar(1240, 110, '128', COL.C, 1);
         txt(ctx, 'hidden = ⌊8 · 128 / 3⌋ = 341', 1360, 330, { size: 28, mono: true, alpha: S.p(1, 0.6, 6) });
-        txt(ctx, '128·682 + 341·128 = 130,944 (+128 norm)', 1360, 390, { size: 24, mono: true, color: COL.dim, alpha: S.p(1, 0.6, 12) });
+        txt(ctx, '128·682 + 341·128 = 130,944 (+128 norm)', 1320, 390, { size: 22, mono: true, color: COL.dim, alpha: S.p(1, 0.6, 12) });
         mtxt(ctx, RES + ' → ' + RES, W / 2, 900, { size: 28, mono: true, align: 'center', alpha: S.p(1, 0.6, 14) });
         ctx.restore();
       }
@@ -524,7 +554,7 @@
       "The attention block comes from the mamba s s m library. One linear layer produces the queries, keys and values together: one hundred and twenty-eight to three hundred and eighty-four.",
       "Before they're split, a small causal depthwise convolution, four frames wide, runs along time. It mixes each position with the three before it, which gives the attention a sense of local order, without any positional embedding.",
       "Then it's standard multi-head attention: four heads of thirty-two. The scores are B by four by two hundred and eight by two hundred and eight. The attention itself is not causal: every frame can attend to every other frame. An output projection maps back to one hundred and twenty-eight.",
-      "Why keep attention at all? The paper argues that pure state space models struggle with content-based retrieval: finding a specific pattern anywhere in the clip. Attention is good at exactly that, while the Hydra blocks cover long-range, ordered structure cheaply. Here, attention costs only about sixty-eight thousand parameters per layer.",
+      "Why keep attention at all? The paper argues that pure state space models struggle to retrieve global artifacts: finding a specific pattern anywhere in the clip. Attention is good at exactly that, while the Hydra blocks cover long-range, ordered structure cheaply. Here, attention costs only about sixty-eight thousand parameters per layer.",
     ],
     hud: S => ({ stage: 4, shape: ['({B:B}, {T:208}, 384)', '({B:B}, {T:208}, 384)', '({B:B}, {H:4}, {T:208}, {T:208})', RES][S.b] }),
     draw(ctx, S) {
@@ -566,7 +596,7 @@
         txt(ctx, 'Hydra (SSM)', 570, 320, { size: 32, weight: 800, align: 'center', color: COL.M });
         txt(ctx, 'Attention', 1350, 320, { size: 32, weight: 800, align: 'center', color: COL.H });
         ['ordered, long-range structure', 'linear in T', 'compressed state memory'].forEach((s, i) => txt(ctx, s, 570, 410 + i * 60, { size: 26, align: 'center' }));
-        ['content-based retrieval', 'finds a pattern anywhere', 'T² scores, but only 4 × 32'].forEach((s, i) => txt(ctx, s, 1350, 410 + i * 60, { size: 26, align: 'center' }));
+        ['global retrieval', 'finds a pattern anywhere', 'T² scores, but only 4 × 32'].forEach((s, i) => txt(ctx, s, 1350, 410 + i * 60, { size: 26, align: 'center' }));
         txt(ctx, 'MHA block: 68,096 params  ·  Hydra block: 137,612  ·  SwiGLU block: 131,072', W / 2, 760, { size: 26, mono: true, align: 'center', color: COL.dim, alpha: S.p(3, 0.6, 10) });
         ctx.restore();
       }
@@ -647,7 +677,7 @@
     code: 'FocalLoss(gamma=2, alpha=[0.1, 0.9]) · AdamW(lr=1e-5, betas=(0.9, 0.95))',
     beats: [
       "Training uses focal loss. It's cross-entropy, scaled by one minus p, to the power gamma, where p is the probability the model gives to the correct class. With gamma equal to two, easy examples barely count, and the model focuses on the hard ones. A class weight, alpha, of point one for spoof and point nine for bona fide balances the two classes.",
-      "The optimizer is Adam W, with a learning rate of one times ten to the minus five, betas of point nine and point nine five, and weight decay of point oh five, with a ten percent warm-up and cosine decay. Batches of thirty-two clips, up to twenty epochs with early stopping, RawBoost augmentation, and ASVspoof 2019 L A as the training set.",
+      "The optimizer is Adam W, with a learning rate of one times ten to the minus five, betas of point nine and point nine five, and weight decay of point oh five, with a ten percent warm-up, then cosine decay down to a tenth of the peak. Batches of thirty-two clips, up to twenty epochs with early stopping, RawBoost augmentation, and ASVspoof 2019 L A as the training set.",
     ],
     hud: { stage: 7, shape: 'scalar loss', label: 'training' },
     draw(ctx, S) {
@@ -669,7 +699,7 @@
       const B = S.p(1);
       if (B > 0) {
         ctx.save(); ctx.globalAlpha = B;
-        const rows = [['optimizer', 'AdamW, lr 1e-5, betas (0.9, 0.95), weight decay 0.05'], ['schedule', '10% linear warm-up, cosine decay'], ['batch · epochs', '32 clips · up to 20, early stopping (patience 7)'],
+        const rows = [['optimizer', 'AdamW, lr 1e-5, betas (0.9, 0.95), weight decay 0.05'], ['schedule', '10% linear warm-up, cosine decay to 10%'], ['batch · epochs', '32 clips · up to 20, early stopping (patience 7)'],
           ['augmentation', 'RawBoost'], ['train data', 'ASVspoof 2019 LA (25,380 clips)'], ['precision', 'mixed BF16 / FP32']];
         rows.forEach((r, i) => {
           const a = S.p(1, 0.4, 0.5 + i * 1.6), y = 260 + i * 95;
@@ -702,7 +732,7 @@
     beats: [
       "Here's the trace from our plain PyTorch replica of the official code, with random weights. The input projection gives B by two hundred and eight by one hundred and twenty-eight.",
       "Inside a Hydra block: seven hundred and seventy-six after the input projection, five hundred and twelve after the convolution, the batch doubled to four for the two scan directions, and four heads of sixty-four.",
-      "The feed-forward, the attention scores, the pooling weights, and the two logits. And the parameter count lands exactly on the paper's three hundred and nineteen point three seven million. The script is in the project folder, in verify, mambo shapes dot py.",
+      "The feed-forward, the attention scores, the pooling weights, and the two logits. And the parameter count lands exactly on the paper's three hundred and nineteen point three seven million. The script is in the repository's verify folder.",
     ],
     hud: { stage: 7, shape: '({B:2}, {K:2})' },
     draw(ctx, S) {

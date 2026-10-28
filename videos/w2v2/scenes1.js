@@ -14,16 +14,56 @@
     ],
     hud: S => S.b >= 2 ? { stage: 0, shape: '({B:B}, {T:16000})' } : null,
     draw(ctx, S) {
-      const a0 = S.p(0, 1.2);
-      drawWave(ctx, 120, 560, 1680, 260, { alpha: 0.35 * a0, reveal: S.l(0, 3), color: COL.T, lw: 1.5 });
-      txt(ctx, 'wav2vec 2.0', W / 2, 380, { size: 132, weight: 800, align: 'center', alpha: a0 });
-      txt(ctx, 'following the numbers, one tensor at a time', W / 2, 460, { size: 40, weight: 500, align: 'center', color: COL.dim, alpha: S.p(0, 1, 0.6) });
+      // cold open: the waveform draws on, is sliced into 20 ms frames, and each frame becomes a column of numbers
+      const T = S.T(0), x0 = 150, x1 = 1770, cy = 690, n = 49, cw = (x1 - x0) / n;
+      E.kicker(ctx, 'DEEPFAKE DETECTORS · SHAPE BY SHAPE', x0 + 4, 214, T + 0.9);
+      chip(ctx, x0 + 600, 206, 'EPISODE 1 / 3', { size: 20, mono: true, color: E.THEME.a, stroke: rgba(E.THEME.a, 0.6), fill: rgba(E.THEME.a, 0.08), alpha: S.p(0, 0.5, 0.2) });
+      E.titleRise(ctx, 'wav2vec 2.0', x0, 400, T + 0.6, { size: 156 });
+      txt(ctx, 'following the numbers, one tensor at a time', x0 + 6, 470, { size: 38, weight: 500, color: COL.dim, alpha: S.p(0, 0.9, 0.5) });
+      // stats column
+      [[94.37, 2, ' M', 'parameters (base)'], [320, 0, '×', 'fewer time steps'], [768, 0, '', 'numbers per frame']].forEach(([v, d, suf, lab], i) => {
+        const t0 = 8.4 + i * 0.8, y = 250 + i * 112;
+        E.countUp(ctx, v, d, x1, y, T - t0, { size: 56, suf, align: 'right', color: i === 0 ? E.THEME.a : COL.text });
+        txt(ctx, lab, x1, y + 34, { size: 22, weight: 600, color: COL.dim, align: 'right', alpha: S.p(0, 0.5, t0 + 0.2) });
+      });
+      // waveform, then frame boundaries, then the morph into a tensor
+      const rev = S.l(0, 2.6, -0.4);
+      const morph = i => E.easeOut4((T - 4.6 - i * 0.05) / 0.55);
+      if (rev > 0) {
+        if (T < 4.6) drawWave(ctx, x0, cy, x1 - x0, 220, { reveal: rev, color: E.THEME.b, lw: 1.6 });
+        else for (let i = 0; i < n; i++) {
+          const m = morph(i);
+          if (m >= 1) continue;
+          drawWave(ctx, x0 + i * cw, cy, cw, 220, { from: Math.floor(i * 16000 / n), to: Math.floor((i + 1) * 16000 / n), color: E.THEME.b, lw: 1.6, alpha: 1 - m });
+        }
+      }
+      for (let i = 1; i < n; i++) {
+        const g = E.easeOut4((T - 3.0 - i * 0.022) / 0.4);
+        if (g <= 0) continue;
+        const fade = 1 - 0.7 * morph(i);
+        line(ctx, x0 + i * cw, cy - 110 * g, x0 + i * cw, cy + 110 * g, rgba('#c8d6ee', 0.22 * fade), 1.5);
+      }
+      for (let i = 0; i < n; i++) {
+        const m = morph(i);
+        if (m <= 0) continue;
+        for (let r = 0; r < 8; r++) {
+          const k = clamp(m * 1.4 - r * 0.05);
+          const y = cy - 92 + r * 23 + (1 - k) * 34;
+          ctx.fillStyle = vcol(noise(i, r, 77) * 0.95, 0.92 * k);
+          ctx.fillRect(x0 + i * cw + 2, y, cw - 4, 19);
+        }
+        if (m < 1) E.glow(ctx, x0 + i * cw + cw / 2, cy, 60, E.THEME.a, 0.5 * (1 - m));
+      }
+      mtxt(ctx, '({B:B}, {T:16000})  samples', x0, 556, { size: 26, mono: true, color: COL.dim, alpha: S.p(0, 0.6, 1.0) * (1 - 0.6 * S.p(0, 0.6, 7.6)) });
+      mtxt(ctx, '→  ({B:B}, {T:49}, {C:768})  one vector per 20 ms', x1, 556, { size: 26, mono: true, align: 'right', color: COL.text, alpha: S.p(0, 0.6, 7.6) });
+      // what we will build from scratch
       const topics = [['1-D convolution', COL.K], ['matrix multiplication', COL.C], ['normalization', COL.A], ['self-attention', COL.H]];
-      let x = W / 2 - 640;
+      const out = 1 - S.p(2, 0.5, 4.2);
+      let x = x0;
       topics.forEach((tp, i) => {
-        const a = S.p(1, 0.6, 0.8 + i * 0.7);
-        const w = chip(ctx, x, 760, tp[0], { size: 28, color: tp[1], stroke: rgba(tp[1], 0.6), alpha: a, fill: rgba(tp[1], 0.08) });
-        x += w + 30;
+        const a = S.p(1, 0.6, 0.8 + i * 0.7) * out;
+        const w = chip(ctx, x, 880, tp[0], { size: 28, color: tp[1], stroke: rgba(tp[1], 0.6), alpha: a, fill: rgba(tp[1], 0.08) });
+        x += w + 26;
       });
       const a2 = S.p(2, 0.8, 5.5);
       if (a2 > 0) {
@@ -216,7 +256,7 @@
       "wav2vec 2.0 expects sixteen thousand measurements per second. That's a sampling rate of sixteen kilohertz. Each measurement is one number, called a sample, usually between minus one and one.",
       "Zoom in, and you can see the individual samples. Every dot is one number. Neighbouring samples are one sixteen-thousandth of a second apart: sixty-two and a half microseconds.",
       "So one second of audio is a vector of sixteen thousand numbers. A batch of B clips of the same length has shape B by sixteen thousand. With a batch of one, it's one by sixteen thousand.",
-      "Before entering the model, each clip is normalized. We subtract its mean and divide by its standard deviation, so every clip has mean zero and variance one. Loud and quiet recordings end up on the same scale. The shape doesn't change.",
+      "Before entering the model, each clip is usually normalized. We subtract its mean and divide by its standard deviation, so every clip has mean zero and variance one. Loud and quiet recordings end up on the same scale. The shape doesn't change.",
       "Notice what's missing: there's no spectrogram, and no hand-crafted features. The model reads the raw waveform directly. For deepfake detection that's attractive, because subtle artifacts left behind by a vocoder can survive in the raw samples, where a spectrogram might blur them.",
     ],
     hud: S => ({ stage: 0, shape: S.b >= 3 ? '({B:B}, {T:16000})' : '({T:16000})' }),
@@ -289,7 +329,7 @@
         dimLeft(ctx, 410, 520, 180, '{B:B} clips', COL.B, 28);
         txt(ctx, '→', 1520, 610, { size: 48, color: COL.dim, base: 'middle' });
         mtxt(ctx, '({B:B}, {T:16000})', 1600, 600, { size: 40, mono: true, base: 'middle' });
-        mtxt(ctx, 'B = 1  →  ({B:1}, {T:16000})', 1600, 670, { size: 26, mono: true, base: 'middle', color: COL.dim, alpha: S.p(3, 0.6, 8) });
+        mtxt(ctx, 'B = 1  →  ({B:1}, {T:16000})', 1560, 670, { size: 26, mono: true, base: 'middle', color: COL.dim, alpha: S.p(3, 0.6, 8) });
         ctx.restore();
       }
       // normalization
@@ -524,7 +564,7 @@
       "Multiply the strides: five, times two to the sixth, is three hundred and twenty. So each output frame advances three hundred and twenty samples, which at sixteen kilohertz is twenty milliseconds. That's fifty frames per second, minus a little at the edges, which is why one second gives forty-nine frames, not fifty.",
       "And how much audio does one frame see? Trace back through the layers, and each output frame depends on four hundred input samples. That's twenty-five milliseconds. So frames are twenty-five milliseconds wide, and twenty milliseconds apart. They overlap slightly, just like classic speech features.",
       "After each convolution comes an activation function called GELU. It passes positive values through, and squashes negative values towards zero, with a smooth curve instead of a hard corner. Without non-linear steps like this, stacking layers would be pointless: seven linear operations in a row collapse into a single one.",
-      "There's also normalization. In the base model, only the first layer has it: a group norm with one group per channel, which rescales each of the five hundred and twelve channels to zero mean and unit variance across time. In the large models, and in X L S R, every layer uses layer norm instead, which normalizes each frame across its channels.",
+      "There's also normalization. In the base model, only the first layer has it: a group norm with one group per channel, which rescales each of the five hundred and twelve channels to zero mean and unit variance across time. In the LV-60 large model, and in X L S R, every layer uses layer norm instead, which normalizes each frame across its channels.",
       "In total, the feature encoder has about four point two million weights. Its job is purely local. It turns every twenty-five milliseconds of raw waveform into a vector of five hundred and twelve numbers. It has no idea yet what came before or after.",
     ],
     hud: S => {

@@ -37,24 +37,65 @@
     ],
     hud: S => S.b >= 2 ? { stage: 0, shape: SHP.in } : null,
     draw(ctx, S) {
-      const a0 = S.p(0, 1.2);
-      for (let i = 0; i < 9; i++) for (let j = i + 1; j < 9; j++) {
-        const ang = k => -Math.PI / 2 + k * 2 * Math.PI / 9;
-        line(ctx, W / 2 + 330 * Math.cos(ang(i)) * 1.9, 560 + 150 * Math.sin(ang(i)), W / 2 + 330 * Math.cos(ang(j)) * 1.9, 560 + 150 * Math.sin(ang(j)), rgba(COL.H, 0.08 * a0), 1.5);
+      // cold open: a feature image is read two ways, and each view becomes a set of graph nodes
+      const T = S.T(0), x0 = 150, x1 = 1770;
+      E.kicker(ctx, 'DEEPFAKE DETECTORS · SHAPE BY SHAPE', x0 + 4, 214, T + 0.9);
+      chip(ctx, x0 + 600, 206, 'EPISODE 2 / 3', { size: 20, mono: true, color: E.THEME.a, stroke: rgba(E.THEME.a, 0.6), fill: rgba(E.THEME.a, 0.08), alpha: S.p(0, 0.5, 0.2) });
+      E.titleRise(ctx, 'AASIST', x0, 400, T + 0.6, { size: 156 });
+      txt(ctx, 'the graph-attention back-end, shape by shape', x0 + 6, 470, { size: 38, weight: 500, color: COL.dim, alpha: S.p(0, 0.9, 0.5) });
+      [[447, 0, ' K', 'back-end parameters'], [109, 0, '', 'graph nodes (42 + 67)'], [160, 0, '', 'numbers in the readout']].forEach(([v, d, suf, lab], i) => {
+        const t0 = 8.6 + i * 0.8, y = 250 + i * 112;
+        const so = 1 - S.p(2, 0.5, 0.6);
+        E.countUp(ctx, v, d, x1, y, T - t0, { size: 56, suf, align: 'right', color: i === 0 ? E.THEME.a : COL.text, alpha: so });
+        txt(ctx, lab, x1, y + 34, { size: 22, weight: 600, color: COL.dim, align: 'right', alpha: S.p(0, 0.5, t0 + 0.2) * so });
+      });
+      // the image
+      const gx = x0, gy = 590, gw = 470, gh = 250;
+      mat(ctx, gx, gy, gw, gh, { rows: 18, cols: 34, seed: 31, alpha: S.p(0, 0.9, 0.4), fn: (r, c) => scol(clamp(0.5 + 0.45 * noise(r, c, 31) * Math.exp(-((r - 6) ** 2) / 60)), 0.95) });
+      txt(ctx, '{F:42} rows × {T:67} frames'.replace(/\{\w:([^}]*)\}/g, '$1'), gx + gw / 2, gy + gh + 46, { size: 24, mono: true, align: 'center', color: COL.dim, alpha: S.p(0, 0.6, 1.6) });
+      // two views -> two node sets
+      const NS = 7, NT = 9, sx = 900, tx0 = 1010, ty = 900;
+      const spec = Array.from({ length: NS }, (_, i) => [sx, 600 + i * 40]);
+      const temp = Array.from({ length: NT }, (_, i) => [tx0 + i * 82, 860]);
+      const master = [1420, 690];
+      const v1 = S.p(0, 0.7, 3.4), v2 = S.p(0, 0.7, 4.4);
+      parrow(ctx, [[gx + gw + 14, 650], [sx - 60, 650]], { color: COL.F, alpha: v1, p: v1 });
+      parrow(ctx, [[gx + gw + 14, 800], [tx0 - 42, 800], [tx0 - 42, 845]], { color: COL.T, alpha: v2, p: v2 });
+      txt(ctx, 'spectral view', sx - 6, 578, { size: 22, weight: 700, color: COL.F, align: 'center', alpha: v1 });
+      txt(ctx, 'temporal view', tx0 + (NT - 1) * 41, 920, { size: 22, weight: 700, color: COL.T, align: 'center', alpha: v2 });
+      // edges: within each set, across sets, and to the master node
+      const e = S.l(0, 1.6, 6.0), em = S.l(0, 1.2, 7.4);
+      if (e > 0) {
+        ctx.save(); ctx.lineWidth = 1.4;
+        spec.forEach((a, i) => temp.forEach((b, j) => {
+          if ((i * 3 + j) % 4) return;
+          const k = clamp(e * 1.6 - (i + j) / (NS + NT));
+          if (k <= 0) return;
+          ctx.strokeStyle = rgba(COL.N, 0.28 * k); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(lerp(a[0], b[0], k), lerp(a[1], b[1], k)); ctx.stroke();
+        }));
+        ctx.restore();
       }
-      for (let i = 0; i < 9; i++) { const ang = -Math.PI / 2 + i * 2 * Math.PI / 9; node(ctx, W / 2 + 330 * Math.cos(ang) * 1.9, 560 + 150 * Math.sin(ang), 14, i % 2 ? COL.T : COL.F, 0.5 * a0); }
-      txt(ctx, 'AASIST', W / 2, 400, { size: 132, weight: 800, align: 'center', alpha: a0 });
-      txt(ctx, 'the graph-attention back-end, shape by shape', W / 2, 475, { size: 40, weight: 500, align: 'center', color: COL.dim, alpha: S.p(0, 1, 0.6) });
-      const a1 = S.p(1, 0.8, 1);
-      mtxt(ctx, 'waveform  →  {A:XLS-R}  →  {H:AASIST}  →  spoof / bona fide', W / 2, 780, { size: 34, align: 'center', alpha: a1, weight: 600 });
-      txt(ctx, 'Jung et al., ICASSP 2022  ·  Tak et al., Odyssey 2022 (SSL-AASIST)', W / 2, 830, { size: 24, align: 'center', color: COL.dim, alpha: a1 });
+      if (em > 0) [...spec, ...temp].forEach((a, i) => {
+        const k = clamp(em * 1.5 - i / (NS + NT));
+        if (k > 0) line(ctx, master[0], master[1], lerp(master[0], a[0], k), lerp(master[1], a[1], k), rgba(COL.K, 0.45 * k), 1.6);
+      });
+      spec.forEach(([x, y], i) => node(ctx, x, y, 13, COL.F, E.easeOut4((T - 3.9 - i * 0.07) / 0.4)));
+      temp.forEach(([x, y], i) => node(ctx, x, y, 13, COL.T, E.easeOut4((T - 4.9 - i * 0.07) / 0.4)));
+      const mm = E.easeOutBack((T - 7.2) / 0.5, 2);
+      if (mm > 0) { node(ctx, master[0], master[1], 24 * mm, COL.K, 1, 'M'); E.glow(ctx, master[0], master[1], 90, COL.K, 0.35 * clamp(mm)); }
+      txt(ctx, 'master node', master[0] + 40, master[1] - 30, { size: 22, weight: 700, color: COL.K, alpha: S.p(0, 0.5, 7.6) });
+      // where it sits, and who made it
+      const out = 1 - S.p(2, 0.5, 0);
+      const a1 = S.p(1, 0.8, 1) * out;
+      mtxt(ctx, 'waveform  →  {A:XLS-R}  →  {H:AASIST}  →  spoof / bona fide', x0, 996, { size: 32, alpha: a1, weight: 600 });
+      txt(ctx, 'Jung et al., ICASSP 2022  ·  Tak et al., Odyssey 2022 (SSL-AASIST)', x1, 996, { size: 24, align: 'right', color: COL.dim, alpha: S.p(1, 0.8, 4) * out });
       const a2 = S.p(2, 0.6, 3);
       if (a2 > 0) {
         [['F', 'feature rows ("spectral")', COL.F], ['N', 'graph nodes', COL.N]].forEach((l, i) => {
-          const x = 600 + i * 440;
-          rrect(ctx, x, 880, 60, 60, 12, rgba(l[2], 0.15 * a2), rgba(l[2], a2), 3);
-          txt(ctx, l[0], x + 30, 912, { size: 34, weight: 800, align: 'center', base: 'middle', color: l[2], alpha: a2 });
-          txt(ctx, l[1], x + 80, 920, { size: 26, weight: 600, alpha: a2 });
+          const x = 1330, y = 220 + i * 100, a = S.p(2, 0.6, 3 + i * 1.4);
+          rrect(ctx, x, y, 60, 60, 12, rgba(l[2], 0.15 * a), rgba(l[2], a), 3);
+          txt(ctx, l[0], x + 30, y + 32, { size: 34, weight: 800, align: 'center', base: 'middle', color: l[2], alpha: a });
+          txt(ctx, l[1], x + 80, y + 40, { size: 26, weight: 600, alpha: a });
         });
       }
     },
@@ -78,7 +119,7 @@
       "A small convolutional encoder, built from six residual blocks, processes that image.",
       "Then the image is summarized twice: once along time, which gives a set of spectral nodes, and once along the feature axis, which gives a set of temporal nodes.",
       "Graph attention lets the nodes exchange information, first within each set, and then across both sets at once, with the help of a master node.",
-      "Finally, a readout squeezes everything into one hundred and sixty numbers, and a linear layer produces two scores: spoof, or bona fide. The whole back-end has only about four hundred and forty-seven thousand parameters. That's tiny next to X L S R's three hundred and fifteen million.",
+      "Finally, a readout squeezes everything into one hundred and sixty numbers, and a linear layer produces two scores: spoof, or bona fide. The whole back-end has only about four hundred and forty-seven thousand parameters. That's tiny next to X L S R's three hundred and fifteen million parameters.",
     ],
     hud: S => ({ stage: [0, 2, 3, 4, 6, 7][S.b], shape: [SHP.in, SHP.pool, SHP.enc, SHP.eS, '({B:B}, {T:16}, {C:32})', '({B:B}, {K:2})'][S.b] }),
     draw(ctx, S) {
@@ -876,7 +917,7 @@
     beats: [
       "Every shape in this video comes from running the authors' own code. Here's the trace, with the X L S R front-end replaced by a random tensor of the right shape, B by two hundred and one by one thousand and twenty-four.",
       "The linear layer, the pooled image, and the six encoder blocks, all as we derived. Then forty-two and sixty-seven nodes, pooled to twenty-one and thirty-three.",
-      "The heterogeneous layers, the second pooling to sixteen and ten nodes, and finally one hundred and sixty numbers in, two logits out. The script is in the project folder, in verify, aasist shapes dot py, if you want to poke at it yourself.",
+      "The heterogeneous layers, the second pooling to sixteen and ten nodes, and finally one hundred and sixty numbers in, two logits out. The script is in the repository's verify folder, if you want to poke at it yourself.",
     ],
     hud: { stage: 7, shape: '({B:2}, {K:2})' },
     draw(ctx, S) {

@@ -1,85 +1,230 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style></head><body>
+<!-- page -->
 <title>Deepfake Detectors, Shape by Shape</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Three animated explainers that follow the tensors through wav2vec 2.0, the AASIST back-end and XLSR-MamBo, the models behind modern voice-deepfake detectors.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+  /* Layout: a screening room. The film is the hero; under it an instrument deck
+     (caption strip, scrubber with chapter ticks, transport), then the chapter index. */
   :root {
-    --bg: #05070c; --panel: #111826; --line: #263246; --text: #e9eef6; --dim: #8d9bb0; --accent: #39d0d8;
+    color-scheme: dark;
+    --ground: #06080d;      /* page */
+    --deck: #0e131d;        /* control surfaces */
+    --deck-2: #151c29;      /* raised controls */
+    --rule: #243045;        /* hairlines */
+    --ink: #e8edf5;         /* text */
+    --ink-dim: #8c99ad;     /* secondary text */
+    --ink-faint: #56637a;
+    --signal: #39d0d8;      /* episode accent (set per episode by script) */
+    --signal-2: #5b7cff;
+    --font-display: 'Bricolage Grotesque', 'Inter', 'Helvetica Neue', Arial, sans-serif;
+    --font-body: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
   }
-  :root { color-scheme: dark; }
   * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, system-ui, sans-serif; }
-  body.render { overflow: hidden; }
-  body.render #ui, body.render #cap { display: none !important; }
-  body.render #stage { width: 1920px; height: 1080px; }
-  #wrap { max-width: 1600px; margin: 0 auto; padding: 16px; }
-  #stage { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #070a10; border-radius: 10px; overflow: hidden; }
-  body.render #stage { border-radius: 0; }
-  canvas { display: block; width: 100%; height: 100%; }
-  #cap { margin-top: 10px; min-height: 3.2em; padding: .5em .9em; border-radius: 8px; background: var(--panel);
-    border: 1px solid var(--line); color: var(--text); font-size: clamp(14px, 1.3vw, 19px); line-height: 1.45; text-align: center; }
+  html, body { background: var(--ground); color: var(--ink); font-family: var(--font-body); }
+  body { margin: 0; font-size: 15px; line-height: 1.5; }
+  a { color: var(--signal); }
+  button, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+
+  #wrap { max-width: 1480px; margin: 0 auto; padding-block: 20px 48px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: flex; flex-direction: column; gap: 18px; }
+
+  /* masthead */
+  .mast { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 10px 24px; }
+  .mast h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(26px, 3.4vw, 44px); line-height: 1.02; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+  .mast h1 em { font-style: normal; color: var(--signal); }
+  .mast p { margin: 6px 0 0; color: var(--ink-dim); max-width: 62ch; }
+  .mast .meta { font-family: var(--font-mono); font-size: 12.5px; color: var(--ink-faint); letter-spacing: 0.04em; text-transform: uppercase; display: flex; gap: 14px; flex-wrap: wrap; }
+  .mast .meta a { color: var(--ink-dim); text-decoration: none; border-bottom: 1px solid var(--rule); }
+  .mast .meta a:hover { color: var(--ink); border-color: var(--signal); }
+
+  /* episode selector: three reels */
+  #eps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .ep { text-align: left; background: var(--deck); border: 1px solid var(--rule); border-radius: 12px; padding: 12px 14px 13px;
+    cursor: pointer; display: grid; grid-template-columns: auto 1fr auto; column-gap: 12px; row-gap: 2px; align-items: baseline; min-width: 0;
+    transition: border-color .2s, background .2s; }
+  .ep:hover { border-color: #3a4a66; }
+  .ep .n { grid-row: span 2; font-family: var(--font-display); font-weight: 800; font-size: 34px; line-height: 1; color: var(--ink-faint); }
+  .ep .t { font-weight: 700; font-size: 16px; min-width: 0; }
+  .ep .d { grid-column: 2 / 4; color: var(--ink-dim); font-size: 13px; min-width: 0; }
+  .ep .len { font-family: var(--font-mono); font-size: 12px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+  .ep[aria-current="true"] { background: var(--deck-2); border-color: var(--ep-c); box-shadow: inset 0 0 0 1px var(--ep-c); }
+  .ep[aria-current="true"] .n { color: var(--ep-c); }
+
+  /* the film */
+  #stage { position: relative; width: 100%; max-width: 100%; aspect-ratio: 16 / 9; background: #05070c; border-radius: 14px; overflow: hidden;
+    box-shadow: 0 0 0 1px var(--rule), 0 24px 60px -24px rgba(0,0,0,.8); }
+  #stage canvas { display: block; width: 100%; height: 100%; cursor: pointer; }
+  #stage:fullscreen { border-radius: 0; background: #000; }
+  #stage:fullscreen canvas { object-fit: contain; }
+  .overlay { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
+  .bigplay { position: absolute; left: 4%; bottom: 7%; pointer-events: auto; display: flex; align-items: center; gap: 14px; padding: 14px 24px 14px 16px; border-radius: 999px; cursor: pointer;
+    background: rgba(8, 12, 19, .78); border: 1px solid rgba(255,255,255,.14); backdrop-filter: blur(6px); color: var(--ink); font-weight: 700; font-size: 17px; }
+  .bigplay .dot { width: 46px; height: 46px; border-radius: 50%; background: var(--signal); display: grid; place-items: center; color: #05070c; }
+  .bigplay small { display: block; font-weight: 500; font-size: 12.5px; color: var(--ink-dim); font-family: var(--font-mono); }
+  /* the film draws its own end card; the overlay only adds the two actions under it */
+  .endcard { position: absolute; left: 8%; bottom: 12%; pointer-events: auto; }
+  .endcard h2, .endcard p { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .endcard .row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  /* caption strip */
+  #cap { min-height: 3.3em; padding: .55em 1em; border-radius: 10px; background: var(--deck); border: 1px solid var(--rule);
+    font-size: clamp(15px, 1.35vw, 20px); line-height: 1.45; text-align: center; text-wrap: balance; color: var(--ink-faint); }
+  #cap .on { color: var(--ink); }
   #cap:empty::before { content: '\00a0'; }
-  #ui { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
-  #bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  button, select { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px;
-    padding: 8px 12px; font: 600 14px Inter, sans-serif; cursor: pointer; min-height: 38px; }
-  button:hover, select:hover { border-color: var(--accent); }
-  #time { font: 500 14px 'JetBrains Mono', monospace; color: var(--dim); min-width: 120px; }
-  #seek { position: relative; height: 26px; cursor: pointer; }
-  #seek .track { position: absolute; left: 0; right: 0; top: 11px; height: 4px; background: var(--line); border-radius: 2px; }
-  #seek .fill { position: absolute; left: 0; top: 11px; height: 4px; background: var(--accent); border-radius: 2px; }
-  #seek .tick { position: absolute; top: 7px; width: 2px; height: 12px; background: #3b4a63; }
-  #chapters { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px; }
-  #chapters button { text-align: left; font-weight: 500; }
-  #tabs { display: flex; gap: 8px; flex-wrap: wrap; }
-  #tabs button.on { background: var(--accent); color: #05070c; border-color: var(--accent); }
-  #chapters button.on { border-color: var(--accent); color: var(--accent); }
+
+  /* scrubber */
+  #seek { position: relative; height: 34px; cursor: pointer; touch-action: none; }
+  #seek .track { position: absolute; left: 0; right: 0; top: 15px; height: 4px; background: var(--rule); border-radius: 2px; }
+  #seek .fill { position: absolute; left: 0; top: 15px; height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--signal-2), var(--signal)); }
+  #seek .head { position: absolute; top: 10px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: var(--ink); box-shadow: 0 0 0 4px rgba(57,208,216,.25); }
+  #seek .tick { position: absolute; top: 11px; width: 2px; height: 12px; margin-left: -1px; background: #3d4c66; border-radius: 1px; }
+  #tip { position: absolute; bottom: 30px; transform: translateX(-50%); white-space: nowrap; pointer-events: none; padding: 4px 8px; border-radius: 6px;
+    background: var(--deck-2); border: 1px solid var(--rule); font-size: 12.5px; color: var(--ink); }
+  #tip b { font-family: var(--font-mono); color: var(--signal); font-weight: 600; margin-right: 6px; }
+
+  /* transport */
+  #bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .btn { background: var(--deck-2); border: 1px solid var(--rule); border-radius: 9px; padding: 8px 13px; min-height: 40px; font-weight: 600; font-size: 14px;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+  .btn:hover { border-color: #3a4a66; }
+  .btn.primary { background: var(--signal); border-color: var(--signal); color: #05070c; min-width: 104px; justify-content: center; }
+  .btn[aria-pressed="false"] { color: var(--ink-faint); }
+  select.btn { padding-right: 10px; }
+  #time { font-family: var(--font-mono); font-size: 14px; color: var(--ink-dim); font-variant-numeric: tabular-nums; min-width: 118px; padding: 0 6px; }
   .grow { flex: 1; }
-  .hint { color: var(--dim); font-size: 13px; }
-  @media (max-width: 600px) { #wrap { padding: 8px; } #chapters { grid-template-columns: 1fr 1fr; } }
+  .hint { color: var(--ink-faint); font-size: 12.5px; }
+  .hint kbd { font-family: var(--font-mono); font-size: 11.5px; padding: 1px 5px; border: 1px solid var(--rule); border-bottom-width: 2px; border-radius: 4px; color: var(--ink-dim); }
+
+  /* chapter index */
+  .sect { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 8px; }
+  .sect h2 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 20px; }
+  .sect span { font-family: var(--font-mono); font-size: 12px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .05em; }
+  #chapters { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px; }
+  #chapters button { text-align: left; background: transparent; border: 1px solid transparent; border-radius: 9px; padding: 8px 10px; cursor: pointer;
+    display: grid; grid-template-columns: 2.2em 1fr auto; gap: 8px; align-items: baseline; min-width: 0; color: var(--ink-dim); }
+  #chapters button:hover { background: var(--deck); border-color: var(--rule); color: var(--ink); }
+  #chapters .cn { font-family: var(--font-mono); font-size: 12.5px; color: var(--ink-faint); }
+  #chapters .ct { min-width: 0; }
+  #chapters .cs { font-family: var(--font-mono); font-size: 12px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+  #chapters button.on { background: var(--deck-2); border-color: var(--rule); color: var(--ink); }
+  #chapters button.on .cn { color: var(--signal); }
+
+  /* credits */
+  .credits { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; padding-top: 14px; border-top: 1px solid var(--rule); color: var(--ink-dim); font-size: 13.5px; }
+  .credits h3 { margin: 0 0 6px; font-size: 12px; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: .06em; color: var(--ink-faint); font-weight: 600; }
+  .credits p { margin: 0 0 4px; max-width: 60ch; }
+
+  /* frame-render mode used by tools/render.py */
+  body.render { overflow: hidden; }
+  body.render #wrap { padding: 0; max-width: none; }
+  body.render #wrap > :not(#stage) { display: none !important; }
+  body.render #stage { width: 1920px; height: 1080px; border-radius: 0; box-shadow: none; }
+  body.render .overlay { display: none; }
+
+  @media (max-width: 760px) {
+    #eps { grid-template-columns: 1fr; order: 5; }
+    .sect { order: 6; } #chapters { order: 7; } .credits { order: 8; }
+    .bigplay { padding: 6px 14px 6px 6px; font-size: 14px; gap: 8px; }
+    .bigplay .dot { width: 32px; height: 32px; }
+    .bigplay small { display: none; }
+    .ep .n { font-size: 26px; }
+    .hint { display: none; }
+    #time { min-width: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) { .ep, .btn { transition: none; } }
 </style>
+
 <div id="wrap">
-  <div id="stage"><canvas id="c" width="1920" height="1080"></canvas></div>
-  <div id="cap" aria-live="polite"></div>
-  <div id="ui">
-    <div id="tabs"></div>
-    <div id="seek"><div class="track"></div><div class="fill" id="fill"></div></div>
-    <div id="bar">
-      <button id="play">▶ Play</button>
-      <button id="back">⟲ 10s</button>
-      <button id="fwd">10s ⟳</button>
-      <span id="time">0:00 / 0:00</span>
-      <span class="grow"></span>
-      <button id="ccbtn">CC on</button>
-      <select id="rate"><option value="0.75">0.75×</option><option value="0.9">0.9×</option><option value="1" selected>1×</option><option value="1.15">1.15×</option><option value="1.3">1.3×</option></select>
+  <header class="mast">
+    <div>
+      <h1>Deepfake detectors, <em>shape by shape</em></h1>
+      <p>Three animated explainers that follow the tensors through the models behind modern voice-deepfake detection, one operation at a time.</p>
     </div>
-    <div class="hint">Space = play/pause · ←/→ = 5 s · click a chapter to jump · pause anywhere to study a frame.</div>
-    <div id="chapters"></div>
+    <div class="meta"><span id="total">3 episodes</span><a href="https://github.com/Ganesh-Deepak/voice-deepfake" target="_blank" rel="noopener">source &amp; verification scripts</a></div>
+  </header>
+
+  <nav id="eps" aria-label="Episodes"></nav>
+
+  <div id="stage">
+    <canvas id="c" width="1920" height="1080" aria-label="Animated explainer"></canvas>
+    <div class="overlay" id="ov">
+      <button class="bigplay" id="bigplay" type="button"><span class="dot" aria-hidden="true">▶</span><span><span id="bpTitle">Play</span><small id="bpSub"></small></span></button>
+      <div class="endcard" id="endcard" hidden>
+        <h2 id="ecTitle">That's the episode.</h2>
+        <p id="ecSub"></p>
+        <div class="row"><button class="btn primary" id="ecNext" type="button">Next episode</button><button class="btn" id="ecAgain" type="button">Watch again</button></div>
+      </div>
+    </div>
   </div>
+
+  <div id="cap" aria-live="polite"></div>
+
+  <div id="seek" role="slider" tabindex="0" aria-label="Seek" aria-valuemin="0"><div class="track"></div><div class="fill" id="fill"></div><div class="head" id="head"></div><div id="tip" hidden></div></div>
+
+  <div id="bar">
+    <button class="btn primary" id="play" type="button">▶ Play</button>
+    <button class="btn" id="back" type="button" aria-label="Back 10 seconds">⟲ 10s</button>
+    <button class="btn" id="fwd" type="button" aria-label="Forward 10 seconds">10s ⟳</button>
+    <span id="time">0:00 / 0:00</span>
+    <span class="grow"></span>
+    <button class="btn" id="ccbtn" type="button" aria-pressed="true">Captions</button>
+    <button class="btn" id="musbtn" type="button" aria-pressed="true">Music</button>
+    <select class="btn" id="rate" aria-label="Playback speed"><option value="0.75">0.75×</option><option value="0.9">0.9×</option><option value="1" selected>1×</option><option value="1.15">1.15×</option><option value="1.3">1.3×</option><option value="1.5">1.5×</option></select>
+    <button class="btn" id="fsbtn" type="button">Full screen</button>
+  </div>
+  <div class="hint"><kbd>Space</kbd> play / pause · <kbd>←</kbd> <kbd>→</kbd> 5 s · <kbd>C</kbd> captions · <kbd>M</kbd> music · <kbd>F</kbd> full screen · pause anywhere to study a frame.</div>
+
+  <div class="sect"><h2 id="chTitle">Chapters</h2><span id="chMeta"></span></div>
+  <div id="chapters"></div>
+
+  <footer class="credits">
+    <div><h3>Papers</h3>
+      <p>Baevski et al., <a href="https://arxiv.org/abs/2006.11477" target="_blank" rel="noopener">wav2vec 2.0</a>, NeurIPS 2020.</p>
+      <p>Jung et al., <a href="https://arxiv.org/abs/2110.01200" target="_blank" rel="noopener">AASIST</a>, ICASSP 2022 · Tak et al., <a href="https://arxiv.org/abs/2202.12233" target="_blank" rel="noopener">SSL-AASIST</a>, Odyssey 2022.</p>
+      <p>Ng et al., <a href="https://arxiv.org/abs/2601.02944" target="_blank" rel="noopener">XLSR-MamBo</a>, Findings of ACL 2026.</p></div>
+    <div><h3>How the numbers were checked</h3>
+      <p>Every shape and parameter count on screen was traced in PyTorch: Hugging Face <span style="font-family:var(--font-mono)">Wav2Vec2Model</span>, the SSL-AASIST authors' back-end, and a CPU replica of the official XLSR-MamBo code. The scripts are in the repository's <span style="font-family:var(--font-mono)">verify/</span> folder.</p></div>
+    <div><h3>Making of</h3>
+      <p>Deterministic canvas animation, narrated with Kokoro (af_heart). Motion follows HyperFrames' motion doctrine and the motion-graphic skill's springs; music and sound effects are synthesized in <span style="font-family:var(--font-mono)">tools/sound.py</span>.</p></div>
+  </footer>
 </div>
-<audio id="aud" preload="auto"></audio>
+
 <script>
 const VIDEOS = [
-  { id: 'w2v2', name: 'wav2vec 2.0', files: ['scenes1.js', 'scenes2.js', 'scenes3.js'] },
-  { id: 'aasist', name: 'AASIST back-end', files: ['scenes.js'] },
-  { id: 'mambo', name: 'XLSR-MamBo back-end', files: ['scenes.js'] },
+  { id: 'w2v2', n: 1, name: 'wav2vec 2.0', desc: 'From raw audio to context vectors: convolution, projection, attention.', files: ['scenes1.js', 'scenes2.js', 'scenes3.js'], color: '#39d0d8', color2: '#5b7cff' },
+  { id: 'aasist', n: 2, name: 'AASIST back-end', desc: 'Features as an image, two node sets, and heterogeneous graph attention.', files: ['scenes.js'], color: '#2dd4bf', color2: '#b78cff' },
+  { id: 'mambo', n: 3, name: 'XLSR-MamBo', desc: 'Bidirectional state space models (Hydra) mixed with attention.', files: ['scenes.js'], color: '#f2cc60', color2: '#c792ea' },
 ];
+const RUNTIME = { w2v2: '28 min', aasist: '16 min', mambo: '15 min' };
 function loadScript(src) {
   return new Promise(res => { const el = document.createElement('script'); el.src = src; el.onload = res; el.onerror = res; document.head.appendChild(el); });
 }
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+};
 (async function () {
   const params = new URLSearchParams(location.search);
   const hashId = (location.hash || '').slice(1);
   const vid = VIDEOS.find(v => v.id === (params.get('v') || hashId)) || VIDEOS[0];
+  const root = document.documentElement.style;
+  root.setProperty('--signal', vid.color); root.setProperty('--signal-2', vid.color2);
   await loadScript('videos/' + vid.id + '/config.js');
   await loadScript('src/engine.js');
   for (const f of vid.files) await loadScript('videos/' + vid.id + '/' + f);
   await loadScript('build/' + vid.id + '/timeline.js');
   const RENDER = params.has('render');
   if (RENDER) document.body.classList.add('render');
+  if (params.has('nograin')) window.ENGINE_OPTS = { grain: false };
   try {
-    await Promise.all(['400 30px Inter', '500 30px Inter', '600 30px Inter', '700 30px Inter', '800 30px Inter',
+    await Promise.all(['400 30px Inter', '500 30px Inter', '600 30px Inter', '700 30px Inter', '800 30px Inter', '700 30px "Bricolage Grotesque"',
       '400 30px "JetBrains Mono"', '600 30px "JetBrains Mono"', '700 30px "JetBrains Mono"'].map(f => document.fonts.load(f)));
   } catch (e) {}
   const canvas = document.getElementById('c');
@@ -90,82 +235,190 @@ function loadScript(src) {
   window.READY = true;
   if (RENDER) { E.renderAt(+params.get('t') || 0); return; }
 
-  const aud = document.getElementById('aud');
-  let hasAudio = false, clock = 0, playing = false, last = performance.now();
-  aud.addEventListener('canplay', () => { hasAudio = true; aud.currentTime = clock; aud.playbackRate = +document.getElementById('rate').value; if (playing) aud.play().catch(() => {}); }, { once: true });
-  // load as a blob so seeking works even on servers without HTTP range support
-  const mp3 = 'build/' + vid.id + '/narration.mp3';
-  if (location.protocol === 'file:') aud.src = mp3;
-  else fetch(mp3).then(r => r.ok ? r.blob() : Promise.reject()).then(b => { aud.src = URL.createObjectURL(b); }).catch(() => { aud.src = mp3; });
-  let cc = true;
-  try { cc = localStorage.getItem('w2v-cc') !== '0'; } catch (e) {}
   const $ = id => document.getElementById(id);
-  const capEl = $('cap'), fill = $('fill'), timeEl = $('time');
   const mmss = s => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
+  document.title = vid.name + ' · Deepfake Detectors, Shape by Shape';
+
+  // episodes
+  VIDEOS.forEach(v => {
+    const b = document.createElement('button');
+    b.className = 'ep'; b.type = 'button'; b.style.setProperty('--ep-c', v.color);
+    b.setAttribute('aria-current', v.id === vid.id ? 'true' : 'false');
+    b.innerHTML = `<span class="n">${String(v.n).padStart(2, '0')}</span><span class="t"></span><span class="len">${v.id === vid.id ? mmss(TL.total) : RUNTIME[v.id]}</span><span class="d"></span>`;
+    b.querySelector('.t').textContent = v.name; b.querySelector('.d').textContent = v.desc;
+    b.onclick = () => go(v.id);
+    $('eps').appendChild(b);
+  });
+  function go(id) {
+    if (id === vid.id) return;
+    if (params.has('v')) location.search = '?v=' + id; else { location.hash = id; location.reload(); }
+  }
+  const next = VIDEOS[VIDEOS.indexOf(vid) + 1];
+
+  // narration (loaded as a blob so seeking works on servers without range requests)
+  const aud = new Audio(); aud.preload = 'auto';
+  let hasAudio = false, clock = 0, playing = false, last = performance.now(), ended = false;
+  aud.addEventListener('canplay', () => { if (hasAudio) return; hasAudio = true; aud.currentTime = clock; aud.playbackRate = +$('rate').value; if (playing) aud.play().catch(() => {}); });
+  fetch('build/' + vid.id + '/narration.mp3').then(r => r.ok ? r.blob() : Promise.reject()).then(b => { aud.src = URL.createObjectURL(b); }).catch(() => {});
+
+  // music: a seamless loop through Web Audio, ducked under the voice
+  let actx = null, mgain = null, mbuf = null, msrc = null;
+  let musicOn = store.get('dd-music', '1') !== '0';
+  const musicBytes = fetch('build/music.mp3').then(r => r.ok ? r.arrayBuffer() : null).catch(() => null);
+  async function startMusic() {
+    try {
+      if (!actx) {
+        actx = new (window.AudioContext || window.webkitAudioContext)();
+        mgain = actx.createGain(); mgain.gain.value = 0; mgain.connect(actx.destination);
+        const bytes = await musicBytes;
+        if (bytes) mbuf = await actx.decodeAudioData(bytes.slice(0));
+      }
+      if (actx.state === 'suspended') await actx.resume();
+      if (mbuf && !msrc) { msrc = actx.createBufferSource(); msrc.buffer = mbuf; msrc.loop = true; msrc.connect(mgain); msrc.start(); }
+    } catch (e) {}
+  }
+  function musicLevel(t) {
+    if (!mgain) return;
+    const speaking = !!E.captionInfo(t).text;
+    const target = musicOn && playing ? (speaking ? 0.32 : 0.62) : 0;
+    mgain.gain.setTargetAtTime(target, actx.currentTime, speaking ? 0.25 : 0.6);
+  }
+
+  // captions
+  let cc = store.get('dd-cc', '1') !== '0';
+  const capEl = $('cap');
+  let capKey = '', capWords = [], capSpans = [];
+  function drawCaption(t) {
+    if (!cc) { if (capKey !== '#off') { capEl.textContent = ''; capKey = '#off'; } return; }
+    const info = E.captionInfo(t);
+    if (info.text !== capKey) {
+      capKey = info.text; capEl.textContent = '';
+      capWords = info.text ? info.text.split(' ') : []; capSpans = capWords.map((w, i) => {
+        const s = document.createElement('span'); s.textContent = w + (i < capWords.length - 1 ? ' ' : ''); capEl.appendChild(s); return s;
+      });
+    }
+    if (!capWords.length) return;
+    const totalChars = capWords.reduce((a, w) => a + w.length + 1, 0);
+    let acc = 0; const lim = info.p * totalChars;
+    capSpans.forEach((s, i) => { acc += capWords[i].length + 1; s.classList.toggle('on', acc - capWords[i].length * 0.5 <= lim + 1); });
+  }
+
+  // chapters + scrubber ticks
+  const chWrap = $('chapters'), chBtns = [];
+  $('chTitle').textContent = vid.name + ' · chapters';
+  $('chMeta').textContent = TL.scenes.length + ' chapters · ' + mmss(TL.total);
+  $('total').textContent = 'Episode ' + vid.n + ' of 3 · ' + mmss(TL.total);
+  TL.scenes.forEach(sc => {
+    const b = document.createElement('button'); b.type = 'button';
+    b.innerHTML = '<span class="cn"></span><span class="ct"></span><span class="cs"></span>';
+    b.querySelector('.cn').textContent = String(sc.scene.chapter).padStart(2, '0');
+    b.querySelector('.ct').textContent = sc.scene.title;
+    b.querySelector('.cs').textContent = mmss(sc.start);
+    b.onclick = () => { seek(sc.start + 0.01); if (!playing) setPlaying(true); };
+    chWrap.appendChild(b); chBtns.push(b);
+    if (sc.index) { const tk = document.createElement('div'); tk.className = 'tick'; tk.style.left = (sc.start / TL.total * 100) + '%'; $('seek').appendChild(tk); }
+  });
+
   const now = () => hasAudio ? aud.currentTime : clock;
-  function seek(t) { t = Math.max(0, Math.min(TL.total - 0.01, t)); clock = t; if (hasAudio) aud.currentTime = t; draw(); }
+  function seek(t) {
+    t = Math.max(0, Math.min(TL.total - 0.01, t)); clock = t; if (hasAudio) aud.currentTime = t;
+    if (t < TL.total - 0.5) { ended = false; $('endcard').hidden = true; }
+    draw();
+  }
   function setPlaying(p) {
     playing = p; $('play').textContent = p ? '❚❚ Pause' : '▶ Play';
+    $('bigplay').hidden = p || ended;
+    if (p) { startMusic(); if (ended) { ended = false; $('endcard').hidden = true; seek(0); } }
+    else if (actx && actx.state === 'running') setTimeout(() => { if (!playing && actx) actx.suspend(); }, 700);
     if (hasAudio) { if (p) aud.play().catch(() => {}); else aud.pause(); }
     last = performance.now();
   }
-  const tabs = $('tabs');
-  VIDEOS.forEach(v => {
-    const b = document.createElement('button');
-    b.textContent = v.name; b.className = v.id === vid.id ? 'on' : '';
-    b.onclick = () => { if (v.id === vid.id) return; if (params.has('v')) location.search = '?v=' + v.id; else { location.hash = v.id; location.reload(); } };
-    tabs.appendChild(b);
-  });
-  const chWrap = $('chapters'), chBtns = [];
-  TL.scenes.forEach(sc => {
-    const b = document.createElement('button');
-    b.textContent = String(sc.scene.chapter).padStart(2, '0') + ' · ' + sc.scene.title;
-    b.onclick = () => seek(sc.start + 0.01);
-    chWrap.appendChild(b); chBtns.push(b);
-    const tk = document.createElement('div'); tk.className = 'tick'; tk.style.left = (sc.start / TL.total * 100) + '%';
-    $('seek').appendChild(tk);
-  });
+  function finish() {
+    setPlaying(false); ended = true; $('bigplay').hidden = true;
+    $('ecTitle').textContent = next ? 'Up next: ' + next.name : 'That was the whole series.';
+    $('ecSub').textContent = next ? next.desc : 'wav2vec 2.0, AASIST and XLSR-MamBo, shape by shape.';
+    $('ecNext').hidden = !next; $('endcard').hidden = false;
+  }
+  $('ecNext').onclick = () => next && go(next.id);
+  $('ecAgain').onclick = () => { ended = false; $('endcard').hidden = true; seek(0); setPlaying(true); };
+
+  const fill = $('fill'), head = $('head'), timeEl = $('time');
+  // until the viewer starts or seeks, show the finished title frame instead of the fade-in
+  const intro = TL.scenes[0], POSTER = intro.start + intro.beats[0].start + Math.min(intro.beats[0].dur - 0.5, 12.5);
+  let poster = true;
+  let lastScene = -1;
   function draw() {
     const t = now();
-    const r = E.renderAt(t);
-    fill.style.width = (t / TL.total * 100) + '%';
+    if (poster && (playing || t > 0.05)) poster = false;
+    const r = E.renderAt(poster ? POSTER : ended ? TL.total - 1.0 : t);
+    const pct = (t / TL.total * 100) + '%';
+    fill.style.width = pct; head.style.left = pct;
     timeEl.textContent = mmss(t) + ' / ' + mmss(TL.total);
-    capEl.hidden = !cc;
-    capEl.textContent = cc ? E.captionAt(t) : '';
-    chBtns.forEach((b, i) => b.classList.toggle('on', i === r.scene));
+    $('seek').setAttribute('aria-valuenow', t.toFixed(0));
+    drawCaption(t);
+    if (r.scene !== lastScene) { chBtns.forEach((b, i) => b.classList.toggle('on', i === r.scene)); lastScene = r.scene; }
+    musicLevel(t);
   }
   function loop(ts) {
     const dt = (ts - last) / 1000; last = ts;
     if (playing && !hasAudio) clock += dt * (+$('rate').value);
-    if (playing && now() >= TL.total - 0.02) setPlaying(false);
+    if (playing && now() >= TL.total - 0.05) finish();
     draw();
     requestAnimationFrame(loop);
   }
+
+  // controls
+  $('bpTitle').textContent = 'Play episode ' + vid.n;
+  $('bpSub').textContent = vid.name + ' · ' + mmss(TL.total);
+  $('bigplay').onclick = () => setPlaying(true);
   $('play').onclick = () => setPlaying(!playing);
   $('back').onclick = () => seek(now() - 10);
   $('fwd').onclick = () => seek(now() + 10);
   $('rate').onchange = e => { aud.playbackRate = +e.target.value; };
-  $('ccbtn').textContent = cc ? 'CC on' : 'CC off';
-  $('ccbtn').onclick = () => { cc = !cc; $('ccbtn').textContent = cc ? 'CC on' : 'CC off'; try { localStorage.setItem('w2v-cc', cc ? '1' : '0'); } catch (e) {} };
-  const seekEl = $('seek');
-  function seekFromEvent(e) { const r = seekEl.getBoundingClientRect(); seek((e.clientX - r.left) / r.width * TL.total); }
-  let dragging = false;
-  seekEl.addEventListener('pointerdown', e => { dragging = true; seekFromEvent(e); seekEl.setPointerCapture(e.pointerId); });
-  seekEl.addEventListener('pointermove', e => { if (dragging) seekFromEvent(e); });
-  seekEl.addEventListener('pointerup', () => { dragging = false; });
+  const setCC = v => { cc = v; $('ccbtn').setAttribute('aria-pressed', String(v)); capEl.hidden = false; store.set('dd-cc', v ? '1' : '0'); capKey = '#'; };
+  const setMusic = v => { musicOn = v; $('musbtn').setAttribute('aria-pressed', String(v)); store.set('dd-music', v ? '1' : '0'); if (v && playing) startMusic(); };
+  setCC(cc); setMusic(musicOn);
+  $('ccbtn').onclick = () => setCC(!cc);
+  $('musbtn').onclick = () => setMusic(!musicOn);
+  const stage = $('stage');
+  $('fsbtn').onclick = () => {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    else if (stage.requestFullscreen) stage.requestFullscreen().catch(() => {});
+  };
   canvas.addEventListener('click', () => setPlaying(!playing));
   document.addEventListener('keydown', e => {
+    if (e.target.closest && e.target.closest('select, input')) return;
     if (e.code === 'Space') { e.preventDefault(); setPlaying(!playing); }
-    if (e.code === 'ArrowLeft') seek(now() - 5);
-    if (e.code === 'ArrowRight') seek(now() + 5);
+    else if (e.code === 'ArrowLeft') seek(now() - 5);
+    else if (e.code === 'ArrowRight') seek(now() + 5);
+    else if (e.key === 'c' || e.key === 'C') setCC(!cc);
+    else if (e.key === 'm' || e.key === 'M') setMusic(!musicOn);
+    else if (e.key === 'f' || e.key === 'F') $('fsbtn').click();
   });
+
+  // scrubber: drag to seek, hover for the chapter under the pointer
+  const seekEl = $('seek'), tip = $('tip');
+  const tAt = e => { const r = seekEl.getBoundingClientRect(); return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * TL.total; };
+  const sceneFor = t => TL.scenes.reduce((a, s) => (t >= s.start ? s : a), TL.scenes[0]);
+  let dragging = false;
+  seekEl.addEventListener('pointerdown', e => { dragging = true; seek(tAt(e)); seekEl.setPointerCapture(e.pointerId); });
+  seekEl.addEventListener('pointermove', e => {
+    const t = tAt(e), sc = sceneFor(t), r = seekEl.getBoundingClientRect();
+    tip.hidden = false; tip.innerHTML = '<b></b><span></span>';
+    tip.querySelector('b').textContent = mmss(t); tip.querySelector('span').textContent = sc.scene.title;
+    const x = Math.max(90, Math.min(r.width - 90, e.clientX - r.left)); tip.style.left = x + 'px';
+    if (dragging) seek(t);
+  });
+  seekEl.addEventListener('pointerleave', () => { tip.hidden = true; });
+  seekEl.addEventListener('pointerup', () => { dragging = false; });
+  seekEl.addEventListener('keydown', e => { if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') e.stopPropagation(), seek(now() + (e.code === 'ArrowLeft' ? -5 : 5)); });
+  seekEl.setAttribute('aria-valuemax', TL.total.toFixed(0));
+
   window.seekTo = seek;
   window.sceneStart = id => { const sc = TL.scenes.find(s => s.scene.id === id); return sc ? sc.start : 0; };
-  window.beatTime = (id, b, dt) => { const sc = TL.scenes.find(s => s.scene.id === id); seek(sc.start + sc.beats[b].start + (dt || 0)); return sc.start + sc.beats[b].start + (dt || 0); };
   const start = parseFloat(params.get('t'));
   if (start) seek(start);
   requestAnimationFrame(loop);
 })();
 </script>
-
 </body></html>

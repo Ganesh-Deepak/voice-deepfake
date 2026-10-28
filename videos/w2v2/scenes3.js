@@ -119,7 +119,7 @@
   S_.push({
     id: 'code', chapter: 13, title: 'Checking it in code',
     beats: [
-      "Here's how this looks in code, with the Hugging Face transformers library. Load the pre-trained base model, and feed it a batch of one clip: one second of audio, sixteen thousand samples.",
+      "Here's how this looks in code, with the Hugging Face transformers library. Load the pre-trained base model, and feed it a batch of two clips, each one second long: sixteen thousand samples.",
       "Printing the shapes confirms everything we derived. The extract features, which is the convolution output after the transpose and the layer norm, is two by forty-nine by five twelve. The last hidden state is two by forty-nine by seven sixty-eight. And there are thirteen hidden states, each two by forty-nine by seven sixty-eight.",
       "It's worth printing the weights too. The first convolution's weight is five hundred and twelve by one by ten. The projection's weight is seven sixty-eight by five twelve: stored transposed, as we saw. And the model has ninety-four point three seven million parameters. Every shape in this video was checked by running exactly this code.",
     ],
@@ -143,7 +143,7 @@
       "The quantizer takes the feature encoder's output before masking: B by forty-nine by five twelve. Its goal is to replace each frame with an entry from a fixed, learned vocabulary of sound units.",
       "It uses two codebooks, each with three hundred and twenty entries. Each entry is a vector of one hundred and twenty-eight numbers.",
       "A linear layer maps each frame's five hundred and twelve numbers to six hundred and forty scores: three hundred and twenty for each codebook. Reshape, to B by forty-nine by two by three hundred and twenty.",
-      "In each codebook, the entry with the highest score is picked. During training this uses a Gumbel softmax: a trick that makes the choice almost exactly one-hot on the way forward, while still letting gradients flow backward.",
+      "In each codebook, the entry with the highest score is picked. During training this uses a Gumbel softmax: a trick that makes the choice exactly one-hot on the way forward, while the gradients flow backward through smooth probabilities.",
       "The two chosen entries, one hundred and twenty-eight numbers each, are concatenated into a vector of two hundred and fifty-six, and passed through one more linear layer. The quantized targets are B by forty-nine by two fifty-six.",
       "Two codebooks of three hundred and twenty give three hundred and twenty squared: over one hundred thousand possible units. That's product quantization: a big vocabulary built from two small ones.",
     ],
@@ -331,10 +331,10 @@
     beats: [
       "Now, your project. For deepfake or spoof detection, the task is classification: is this clip bona fide, or spoofed?",
       "The simplest recipe: run the model, take the last hidden state, B by T by seven sixty-eight, and average over time. The time axis disappears, leaving B by seven sixty-eight: one vector per clip.",
-      "A linear layer maps seven sixty-eight to two scores. The output is B by two. In the ASVspoof recipes, class zero is spoof and class one is bona fide. A softmax turns the scores into probabilities, and a cross-entropy loss trains the head, often weighted point one for spoof and point nine for bona fide, because spoofed clips far outnumber real ones. Usually the transformer is fine-tuned too, with a small learning rate, while the convolutional feature encoder is often kept frozen.",
+      "A linear layer maps seven sixty-eight to two scores. The output is B by two. In the ASVspoof recipes, class zero is spoof and class one is bona fide. A softmax turns the scores into probabilities, and a cross-entropy loss trains the head, often weighted point one for spoof and point nine for bona fide, because spoofed clips far outnumber real ones. Usually the front end is fine-tuned too, with a very small learning rate. Some recipes keep the convolutional feature encoder frozen; SSL-AASIST fine-tunes all of it.",
       "A popular upgrade: use all thirteen hidden states. Learn thirteen weights, pass them through a softmax, and take a weighted sum over the layer axis. Thirteen by B by T by seven sixty-eight becomes B by T by seven sixty-eight. The model learns for itself which layers carry the artifacts.",
       "Many state-of-the-art systems, like X L S R with an A A SIST back-end, use the large model on four-second crops of sixty-four thousand six hundred samples. Run our formula: sixty-four thousand six hundred samples become two hundred and one frames. So the front end outputs B by two hundred and one by one thousand and twenty-four, and a linear layer shrinks that to one hundred and twenty-eight features, before the graph attention back-end. The next two videos, on the A A SIST and MamBo back-ends, pick up exactly here.",
-      "One practical detail. When clips in a batch have different lengths, the shorter ones are padded. An attention mask, of shape B by number of samples, tells the model which positions are real, so attention can ignore the padding. When you pool over time, average only over the real frames.",
+      "One practical detail. When clips in a batch have different lengths, the shorter ones are padded. Models like X L S R take an attention mask, of shape B by number of samples, which tells the model which positions are real, so attention can ignore the padding. The base model was trained without one, so there you simply pad with zeros. When you pool over time, average only over the real frames.",
     ],
     hud: S => ({ stage: 6, shape: ['({B:B}, {T:16000})', '({B:B}, {C:768})', '({B:B}, {K:2})', '({B:B}, {T:T}, {C:768})', '({B:B}, {T:201}, {C:1024})', '({B:B}, {T:L})  mask'][S.b] }),
     draw(ctx, S) {
@@ -390,8 +390,8 @@
           ctx.globalAlpha = P * S.p(2, 0.6, 9);
           rrect(ctx, 1080, 740, 740, 170, 14, COL.panel, COL.line, 2);
           txt(ctx, 'loss: CE, class weights [0.1, 0.9]', 1105, 790, { size: 26 });
-          txt(ctx, 'fine-tune transformer, small LR (~1e-5 … 1e-6)', 1105, 836, { size: 24, color: COL.dim });
-          txt(ctx, 'feature encoder (CNN): often frozen', 1105, 880, { size: 24, color: COL.dim });
+          txt(ctx, 'fine-tune the front end too, small LR (~1e-5 … 1e-6)', 1105, 836, { size: 24, color: COL.dim });
+          txt(ctx, 'CNN encoder: frozen in some recipes, tuned in SSL-AASIST', 1105, 880, { size: 24, color: COL.dim });
         }
         ctx.restore();
       }
