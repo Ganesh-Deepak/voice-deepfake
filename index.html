@@ -61,8 +61,25 @@
   #stage { position: relative; width: 100%; max-width: 100%; aspect-ratio: 16 / 9; background: #05070c; border-radius: 14px; overflow: hidden;
     box-shadow: 0 0 0 1px var(--rule), 0 24px 60px -24px rgba(0,0,0,.8); }
   #stage canvas { display: block; width: 100%; height: 100%; cursor: pointer; }
-  #stage:fullscreen { border-radius: 0; background: #000; }
-  #stage:fullscreen canvas { object-fit: contain; }
+  #player { display: flex; flex-direction: column; gap: 12px; }
+  #controls { display: flex; flex-direction: column; gap: 8px; }
+  #fsicon { position: absolute; right: max(12px, 1.2%); top: max(12px, 2%); z-index: 3; width: 44px; height: 44px; display: grid; place-items: center;
+    border-radius: 12px; border: 1px solid rgba(255,255,255,.18); background: rgba(8,12,20,.62); color: #e8edf5; cursor: pointer; opacity: .78; transition: opacity .2s; }
+  #fsicon:hover, #fsicon:focus-visible { opacity: 1; }
+  /* full screen: the whole player (film, captions, controls) fills the screen; controls auto-hide */
+  #player:fullscreen, #player.pseudo-fs { background: #000; width: 100vw; height: 100vh; gap: 0; position: relative; justify-content: center; }
+  #player.pseudo-fs { position: fixed; inset: 0; z-index: 1000; height: 100dvh; }
+  #player:fullscreen #stage, #player.pseudo-fs #stage { width: 100%; height: 100%; aspect-ratio: auto; border-radius: 0; box-shadow: none; background: #000; }
+  #player:fullscreen canvas, #player.pseudo-fs canvas { object-fit: contain; }
+  #player:fullscreen #cap, #player.pseudo-fs #cap { position: absolute; left: 50%; transform: translateX(-50%); bottom: 118px; width: min(92%, 1100px); z-index: 3;
+    background: rgba(6,9,16,.74); border-color: transparent; font-size: clamp(16px, 1.6vw, 26px); }
+  #player:fullscreen #controls, #player.pseudo-fs #controls { position: absolute; left: 0; right: 0; bottom: 0; z-index: 4; transition: opacity .3s;
+    padding: 28px max(20px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px));
+    background: linear-gradient(rgba(0,0,0,0), rgba(0,0,0,.86) 45%); }
+  #player:fullscreen .bigplay, #player.pseudo-fs .bigplay { left: 50%; top: 50%; bottom: auto; transform: translate(-50%, -50%); }
+  #player.idle #controls, #player.idle #fsicon { opacity: 0; pointer-events: none; }
+  #player.idle canvas { cursor: none; }
+  #player:fullscreen #cap:empty, #player.pseudo-fs #cap:empty { display: none; }
   .overlay { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
   .bigplay { position: absolute; left: 4%; bottom: 7%; pointer-events: auto; display: flex; align-items: center; gap: 14px; padding: 14px 24px 14px 16px; border-radius: 999px; cursor: pointer;
     background: rgba(8, 12, 19, .78); border: 1px solid rgba(255,255,255,.14); backdrop-filter: blur(6px); color: var(--ink); font-weight: 700; font-size: 17px; }
@@ -124,7 +141,7 @@
   /* frame-render mode used by tools/render.py */
   body.render { overflow: hidden; }
   body.render #wrap { padding: 0; max-width: none; }
-  body.render #wrap > :not(#stage) { display: none !important; }
+  body.render #wrap > :not(#player), body.render #player > :not(#stage), body.render #fsicon { display: none !important; }
   body.render #stage { width: 1920px; height: 1080px; border-radius: 0; box-shadow: none; }
   body.render .overlay { display: none; }
 
@@ -152,8 +169,10 @@
 
   <nav id="eps" aria-label="Episodes"></nav>
 
+  <div id="player">
   <div id="stage">
     <canvas id="c" width="1920" height="1080" aria-label="Animated explainer"></canvas>
+    <button id="fsicon" type="button" aria-label="Full screen" title="Full screen (F)"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <div class="overlay" id="ov">
       <button class="bigplay" id="bigplay" type="button"><span class="dot" aria-hidden="true">▶</span><span><span id="bpTitle">Play</span><small id="bpSub"></small></span></button>
       <div class="endcard" id="endcard" hidden>
@@ -165,6 +184,7 @@
   </div>
 
   <div id="cap" aria-live="polite"></div>
+  <div id="controls">
 
   <div id="seek" role="slider" tabindex="0" aria-label="Seek" aria-valuemin="0"><div class="track"></div><div class="fill" id="fill"></div><div class="head" id="head"></div><div id="tip" hidden></div></div>
 
@@ -177,9 +197,11 @@
     <button class="btn" id="ccbtn" type="button" aria-pressed="true">Captions</button>
     <button class="btn" id="musbtn" type="button" aria-pressed="true">Music</button>
     <select class="btn" id="rate" aria-label="Playback speed"><option value="0.75">0.75×</option><option value="0.9">0.9×</option><option value="1" selected>1×</option><option value="1.15">1.15×</option><option value="1.3">1.3×</option><option value="1.5">1.5×</option></select>
-    <button class="btn" id="fsbtn" type="button">Full screen</button>
+    <button class="btn" id="fsbtn" type="button">⛶ Full screen</button>
   </div>
-  <div class="hint"><kbd>Space</kbd> play / pause · <kbd>←</kbd> <kbd>→</kbd> 5 s · <kbd>C</kbd> captions · <kbd>M</kbd> music · <kbd>F</kbd> full screen · pause anywhere to study a frame.</div>
+  </div>
+  </div>
+  <div class="hint"><kbd>Space</kbd> play / pause · <kbd>←</kbd> <kbd>→</kbd> 5 s · <kbd>C</kbd> captions · <kbd>M</kbd> music · <kbd>F</kbd> or double-click: full screen · pause anywhere to study a frame.</div>
 
   <div class="sect"><h2 id="chTitle">Chapters</h2><span id="chMeta"></span></div>
   <div id="chapters"></div>
@@ -198,11 +220,11 @@
 
 <script>
 const VIDEOS = [
-  { id: 'xlsr', n: 1, name: 'XLS-R 300M', desc: 'The 24-layer front end: waveform to 201 context vectors, every tensor in 3-D.', files: ['scenes1.js', 'scenes2.js', 'scenes3.js'], color: '#38d9f5', color2: '#7c6cff' },
+  { id: 'xlsr', n: 1, name: 'XLS-R 300M', desc: 'The 24-layer front end, built step by step: waveform to one context vector per 20 ms, with every tensor shape on screen.', files: ['scenes1.js', 'scenes2.js', 'scenes3.js'], color: '#38d9f5', color2: '#7c6cff' },
   { id: 'aasist', n: 2, name: 'AASIST back-end', desc: 'Features as an image, two node sets, and heterogeneous graph attention.', files: ['scenes.js'], color: '#2dd4bf', color2: '#b78cff' },
   { id: 'mambo', n: 3, name: 'XLSR-MamBo', desc: 'Bidirectional state space models (Hydra) mixed with attention.', files: ['scenes.js'], color: '#f2cc60', color2: '#c792ea' },
 ];
-const RUNTIME = { xlsr: '24 min', aasist: '16 min', mambo: '15 min' };
+const RUNTIME = { xlsr: '31 min', aasist: '17 min', mambo: '16 min' };
 function loadScript(src) {
   return new Promise(res => { const el = document.createElement('script'); el.src = src; el.onload = res; el.onerror = res; document.head.appendChild(el); });
 }
@@ -381,12 +403,30 @@ const store = {
   setCC(cc); setMusic(musicOn);
   $('ccbtn').onclick = () => setCC(!cc);
   $('musbtn').onclick = () => setMusic(!musicOn);
-  const stage = $('stage');
-  $('fsbtn').onclick = () => {
-    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-    else if (stage.requestFullscreen) stage.requestFullscreen().catch(() => {});
-  };
-  canvas.addEventListener('click', () => setPlaying(!playing));
+  const player = $('player');
+  const isFs = () => !!document.fullscreenElement || player.classList.contains('pseudo-fs');
+  const pseudo = on => { player.classList.toggle('pseudo-fs', on); document.body.style.overflow = on ? 'hidden' : ''; fsLabel(); };
+  const fsLabel = () => { const on = isFs(); $('fsbtn').textContent = on ? '✕ Exit full screen' : '⛶ Full screen'; $('fsicon').setAttribute('aria-label', on ? 'Exit full screen' : 'Full screen'); };
+  function toggleFs() {
+    if (document.fullscreenElement) { document.exitFullscreen().catch(() => {}); return; }
+    if (player.classList.contains('pseudo-fs')) { pseudo(false); return; }
+    const req = player.requestFullscreen || player.webkitRequestFullscreen;
+    if (req) {
+      Promise.resolve(req.call(player)).then(() => { try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} }).catch(() => pseudo(true));
+    } else pseudo(true);
+  }
+  document.addEventListener('fullscreenchange', fsLabel);
+  $('fsbtn').onclick = toggleFs;
+  $('fsicon').onclick = e => { e.stopPropagation(); toggleFs(); };
+  canvas.addEventListener('dblclick', toggleFs);
+  // controls fade away while the film plays and the pointer rests
+  let idleT = 0;
+  const wake = () => { player.classList.remove('idle'); clearTimeout(idleT); idleT = setTimeout(() => { if (playing && isFs()) player.classList.add('idle'); }, 2600); };
+  ['pointermove', 'pointerdown', 'keydown', 'touchstart'].forEach(ev => player.addEventListener(ev, wake, { passive: true }));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && player.classList.contains('pseudo-fs')) pseudo(false); });
+  let clickT = 0;
+  canvas.addEventListener('click', () => { clearTimeout(clickT); clickT = setTimeout(() => setPlaying(!playing), 220); });
+  canvas.addEventListener('dblclick', () => clearTimeout(clickT));
   document.addEventListener('keydown', e => {
     if (e.target.closest && e.target.closest('select, input')) return;
     if (e.code === 'Space') { e.preventDefault(); setPlaying(!playing); }
@@ -394,7 +434,7 @@ const store = {
     else if (e.code === 'ArrowRight') seek(now() + 5);
     else if (e.key === 'c' || e.key === 'C') setCC(!cc);
     else if (e.key === 'm' || e.key === 'M') setMusic(!musicOn);
-    else if (e.key === 'f' || e.key === 'F') $('fsbtn').click();
+    else if (e.key === 'f' || e.key === 'F') toggleFs();
   });
 
   // scrubber: drag to seek, hover for the chapter under the pointer

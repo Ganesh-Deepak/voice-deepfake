@@ -1,256 +1,778 @@
-// XLS-R 300M, scenes 7–12: masking, positional convolution, attention, multi-head attention, one layer, 24 layers.
+// Scenes 6–11: projection, masking, positional conv, attention (toy), multi-head attention, transformer layer
 (function () {
-  const { W, COL, THEME, clamp, lerp, easeIO, easeOut, easeOut4, noise, fmt, rgba, vcol, scol, txt, mtxt, rrect, line, arrow,
-    chip, box, numMat, brace, cross, glow, penTip } = E;
-  const S_ = window.SCENES, X = window.XL;
-  const RES = '({B:B}, {T:201}, {C:1024})';
+  const { W, COL, clamp, lerp, easeIO, noise, fmt, fmtInt, rgba, vcol, scol, txt, mtxt, mwidth, wrap, rrect, line, arrow, parrow, chip, box,
+    cells, mat, dimTop, dimLeft, dimBottom, dimRight, stack, numRow, numMat, brace, cross, drawWave } = E;
+  const S_ = window.SCENES;
+
+  // attention-like pattern helpers (illustrative)
+  const PAT = {
+    local: (i, j) => Math.exp(-Math.pow(i - j, 2) / 4.5),
+    similar: (i, j) => { const s = k => [0, 1, 2, 0, 1, 2, 1][Math.floor(k / 7) % 7]; return (s(i) === s(j) ? 1 : 0.06) * (0.6 + 0.4 * Math.abs(noise(j, 2, 5))); },
+    global: (i, j) => ([4, 17, 31, 44].includes(j) ? 1 : 0.05) * (0.8 + 0.2 * noise(i, j, 8)),
+    mixed: (i, j) => 0.7 * Math.exp(-Math.pow(i - j, 2) / 8) + 0.3 * ([8, 26].includes(j) ? 1 : 0.1),
+  };
+  function heat(ctx, x, y, size, n, f, a = 1) {
+    const rows = [];
+    for (let i = 0; i < n; i++) { let m = 0; const r = []; for (let j = 0; j < n; j++) { const v = f(i, j); r.push(v); m = Math.max(m, v); } rows.push(r.map(v => v / m)); }
+    ctx.save(); ctx.globalAlpha *= a;
+    rrect(ctx, x - 3, y - 3, size + 6, size + 6, 6, COL.bg2, COL.line, 2);
+    cells(ctx, x, y, n, n, size / n, size / n, (i, j) => scol(rows[i][j]), size / n > 6 ? 1 : 0);
+    ctx.restore();
+  }
+
+  const { THEME, easeOut4, glow, penTip } = E;
+  const XL = window.XL;
+  const RES = '({B:B}, {T:49}, {C:1024})';
+  // ------------------------------------------------------------------ 6 projection
+  S_.push({
+    id: 'projection', chapter: 6, title: 'Transpose, layer norm, linear projection',
+    code: S => S.b < 2 ? 'features.transpose(1, 2)' : S.b < 3 ? 'feature_projection.layer_norm' : 'feature_projection.projection',
+    beats: [
+      "The convolution output is B by five twelve by forty-nine: channels first, then time. The transformer wants time first, so we transpose, swapping the last two axes. Now it's B by forty-nine by five twelve. Nothing is computed here. We just view the same numbers in a different order.",
+      "Think of it as forty-nine rows, one per frame. Each row is a vector of five hundred and twelve numbers describing that twenty-millisecond moment.",
+      "Next comes layer normalization. For each frame on its own, compute the mean and standard deviation of its five hundred and twelve numbers. Subtract the mean, and divide by the standard deviation. Then multiply by a learned scale, and add a learned shift. Notice the direction: layer norm works across features, within one frame.",
+      "Then a linear layer. Let's build it from scratch. A linear layer takes an input vector and produces an output vector. Each output number is a weighted sum of all the input numbers, plus a bias.",
+      "Collect all the weights into a matrix. Here it's five hundred and twelve by one thousand and twenty-four: one column of weights for each of the one thousand and twenty-four outputs. One warning, because this trips everyone up: PyTorch stores this matrix the other way around. The weight of a linear layer from five twelve to ten twenty-four has shape ten twenty-four by five twelve, and the layer computes x times W transposed, plus b. Same numbers, stored transposed.",
+      "Now stack all forty-nine frames as rows, and the whole layer becomes a single matrix multiplication. The rule: the inner sizes must match, and they disappear. Forty-nine by five twelve, times five twelve by ten twenty-four, gives forty-nine by ten twenty-four.",
+      "The same weights are applied to every frame independently. A linear layer only changes the last axis; batch and time pass through untouched. Our tensor is now B by forty-nine by one thousand and twenty-four. One thousand and twenty-four is X L S R's hidden size, and it stays fixed from here to the very end.",
+    ],
+    hud: S => ({ stage: 2, shape: S.b < 1 && S.T(0) < 5 ? '({B:B}, {C:512}, {T:49})' : S.b < 6 ? '({B:B}, {T:49}, {C:512})' : '({B:B}, {T:49}, {C:1024})' }),
+    draw(ctx, S) {
+      // transpose
+      const A = S.vis(0, 2);
+      if (A > 0) {
+        ctx.save(); ctx.globalAlpha = A;
+        const R = 12, Cc = 16, s = 30;
+        const tr = easeIO(S.l(0, 2.2, 5));
+        const bx = 330, by = 300, ax = 380, ay = 240;
+        for (let r = 0; r < R; r++) for (let c = 0; c < Cc; c++) {
+          const x = lerp(bx + c * s, ax + r * s, tr), y = lerp(by + r * s, ay + c * s, tr);
+          let col = vcol(noise(r, c, 61) * 0.95, 0.9);
+          ctx.fillStyle = col; ctx.fillRect(x + 1.5, y + 1.5, s - 3, s - 3);
+        }
+        const la = 1 - clamp(tr * 3), lb = clamp(tr * 3 - 2);
+        ctx.globalAlpha = A * la;
+        dimLeft(ctx, bx - 6, by, R * s, '{C:512}', COL.C, 26); dimTop(ctx, bx, by - 6, Cc * s, 'time {T:49}', COL.T, 26);
+        ctx.globalAlpha = A * lb;
+        dimLeft(ctx, ax - 6, ay, Cc * s, 'time {T:49}', COL.T, 26); dimTop(ctx, ax, ay - 6, R * s, 'features {C:512}', COL.C, 26);
+        ctx.globalAlpha = A;
+        const hb = 1 - S.p(1, 0.5, 0);   // the transpose labels make room for the frame callout in beat 1
+        mtxt(ctx, '({B:B}, {C:512}, {T:49})', 1350, 360, { size: 40, mono: true, align: 'center', alpha: (1 - 0.6 * tr) * hb });
+        arrow(ctx, 1350, 400, 1350, 480, { color: COL.dim, p: S.p(0, 0.6, 4.5), alpha: hb });
+        mtxt(ctx, 'x.transpose(1, 2)', 1380, 450, { size: 24, mono: true, color: COL.dim, alpha: S.p(0, 0.6, 4.5) * hb });
+        mtxt(ctx, '({B:B}, {T:49}, {C:512})', 1350, 540, { size: 40, mono: true, align: 'center', alpha: tr * hb });
+        mtxt(ctx, 'same numbers, different order', 1350, 620, { size: 28, align: 'center', color: COL.dim, alpha: S.p(0, 0.6, 10) * hb });
+        // highlight a frame (beat 1)
+        const h = S.p(1, 0.6, 0.5);
+        if (h > 0) {
+          const fr = 5;
+          ctx.globalAlpha = A * h;
+          rrect(ctx, ax - 4, ay + fr * s - 4, R * s + 8, s + 8, 6, null, COL.A, 4);
+          arrow(ctx, ax + R * s + 20, ay + fr * s + s / 2, 1000, ay + fr * s + s / 2, { color: COL.A });
+          mtxt(ctx, 'frame 6 = a vector of {C:512} numbers', 1030, ay + fr * s + s / 2 + 10, { size: 30, weight: 600 });
+          mtxt(ctx, 'one 20 ms step of audio (each frame sees 25 ms)', 1030, ay + fr * s + s / 2 + 56, { size: 26, color: COL.dim });
+        }
+        ctx.restore();
+      }
+      // layer norm
+      const L = S.vis(2, 3);
+      if (L > 0) {
+        ctx.save(); ctx.globalAlpha = L;
+        mtxt(ctx, 'LayerNorm(x)  =  γ ⊙ (x − μ) / σ  +  β', W / 2, 190, { size: 40, mono: true, align: 'center', weight: 600 });
+        txt(ctx, 'μ, σ = mean and std of the 512 numbers of ONE frame; γ, β = learned (512 each)', W / 2, 240, { size: 24, align: 'center', color: COL.dim });
+        const n = 32, bw = 22, x0 = 170, x1 = 1060, yc = 540;
+        const raw = Array.from({ length: n }, (_, i) => 0.9 + 1.4 * noise(i, 4, 71));
+        const mu = raw.reduce((a, b) => a + b, 0) / n, sd = Math.sqrt(raw.reduce((a, b) => a + (b - mu) ** 2, 0) / n);
+        const t1 = easeIO(S.l(2, 1.2, 6)), t2 = easeIO(S.l(2, 1.2, 12));
+        const panel = (x, title, vals, showMu, col) => {
+          rrect(ctx, x - 20, 300, n * bw + 40, 480, 14, COL.panel, COL.line, 2);
+          txt(ctx, title, x + n * bw / 2, 340, { size: 26, weight: 700, align: 'center', color: col });
+          line(ctx, x, yc, x + n * bw, yc, COL.faint, 1.5);
+          vals.forEach((v, i) => { ctx.fillStyle = v >= 0 ? rgba(COL.C, 0.8) : rgba(COL.T, 0.8); const hh = v * 70; ctx.fillRect(x + i * bw + 3, Math.min(yc, yc - hh), bw - 6, Math.abs(hh)); });
+          if (showMu != null) { line(ctx, x, yc - showMu * 70, x + n * bw, yc - showMu * 70, COL.K, 2.5, [8, 6]); }
+        };
+        panel(x0, 'one frame (32 of its 512 numbers)', raw, mu, COL.text);
+        txt(ctx, `μ = ${mu.toFixed(2)}   σ = ${sd.toFixed(2)}`, x0 + n * bw / 2, 750, { size: 24, mono: true, align: 'center', color: COL.K });
+        const norm = raw.map(v => (v - mu) / sd);
+        const g = raw.map((_, i) => 1 + 0.35 * noise(i, 9, 3)), b = raw.map((_, i) => 0.25 * noise(i, 11, 3));
+        const vals = norm.map((v, i) => lerp(lerp(raw[i], v, t1), v * g[i] + b[i], t2));
+        panel(x1, t2 > 0.5 ? '× γ + β  (learned)' : 'normalized', vals, lerp(mu, 0, t1), COL.A);
+        txt(ctx, t1 > 0.5 ? 'μ = 0.00   σ = 1.00' : '', x1 + n * bw / 2, 750, { size: 24, mono: true, align: 'center', color: COL.K, alpha: 1 - t2 });
+        arrow(ctx, x0 + n * bw + 30, yc, x1 - 30, yc, { color: COL.dim });
+        const d = S.p(2, 0.6, 17);
+        rrect(ctx, 430, 820, 1060, 70, 12, null, rgba(COL.A, 0.6 * d), 2);
+        mtxt(ctx, 'LayerNorm: across {C:features}, within one frame  ·  shape unchanged', W / 2, 866, { size: 28, align: 'center', alpha: d, weight: 600 });
+        ctx.restore();
+      }
+      // neurons
+      const N = S.vis(3, 5);
+      if (N > 0) {
+        ctx.save(); ctx.globalAlpha = N;
+        const ins = [0.8, -0.4, 0.3, 1.0], outs = 3;
+        const ix = 300, ox = 800, iy = j => 330 + j * 120, oy = j => 390 + j * 130;
+        const hi = Math.floor(S.l(3, 6, 4) * 3) % 3;
+        for (let i = 0; i < 4; i++) for (let j = 0; j < outs; j++) {
+          const on = j === hi && S.T(3) > 4;
+          line(ctx, ix, iy(i), ox, oy(j), on ? rgba(COL.K, 0.95) : rgba(COL.dim, 0.35), on ? 3.5 : 1.5);
+        }
+        for (let i = 0; i < 4; i++) {
+          ctx.fillStyle = COL.panel2; ctx.strokeStyle = COL.C; ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.arc(ix, iy(i), 36, 0, 7); ctx.fill(); ctx.stroke();
+          txt(ctx, fmt(ins[i], 1), ix, iy(i) + 1, { size: 22, mono: true, align: 'center', base: 'middle', weight: 600 });
+          txt(ctx, 'x' + (i + 1), ix - 70, iy(i) + 1, { size: 26, align: 'center', base: 'middle', color: COL.C, weight: 700 });
+        }
+        for (let j = 0; j < outs; j++) {
+          ctx.fillStyle = COL.panel2; ctx.strokeStyle = j === hi && S.T(3) > 4 ? COL.K : COL.C; ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.arc(ox, oy(j), 36, 0, 7); ctx.fill(); ctx.stroke();
+          txt(ctx, 'y' + (j + 1), ox + 70, oy(j) + 1, { size: 26, align: 'center', base: 'middle', color: COL.C, weight: 700 });
+        }
+        txt(ctx, 'inputs', ix, 250, { size: 24, color: COL.dim, align: 'center' });
+        txt(ctx, 'outputs', ox, 300, { size: 24, color: COL.dim, align: 'center' });
+        txt(ctx, 'yⱼ = x₁·W₁ⱼ + x₂·W₂ⱼ + x₃·W₃ⱼ + x₄·W₄ⱼ + bⱼ', 1000, 440, { size: 32, mono: true });
+        txt(ctx, 'every output sees every input', 1000, 500, { size: 28, color: COL.dim });
+        // weight matrix (beat 4)
+        const m = S.p(4, 0.8);
+        if (m > 0) {
+          ctx.globalAlpha = N * m;
+          rrect(ctx, 960, 560, 860, 360, 14, 'rgba(10,14,22,0.96)', COL.line, 2);
+          mat(ctx, 1220, 640, 380, 240, { rows: 12, cols: 19, seed: 81, left: ['{C:512} inputs', COL.C], top: ['{C:1024} outputs', COL.C] });
+          const cc = Math.floor(S.l(4, 5, 3) * 19) % 19;
+          rrect(ctx, 1220 + cc * 20 - 3, 637, 26, 246, 5, null, COL.K, 3);
+          txt(ctx, 'column j = weights of output j', 1410, 910, { size: 22, color: COL.K, align: 'center', alpha: S.p(4, 0.6, 3) });
+          txt(ctx, 'W', 1000, 780, { size: 60, weight: 800, color: COL.K });
+          const pt = S.p(4, 0.6, 9);
+          if (pt > 0) { ctx.globalAlpha = N * m * pt; rrect(ctx, 140, 830, 800, 90, 12, 'rgba(242,204,96,0.08)', rgba(COL.K, 0.7), 2); mtxt(ctx, 'PyTorch stores it transposed:', 540, 866, { size: 22, align: 'center', color: COL.K, weight: 700 }); mtxt(ctx, 'layer.weight.shape = ({C:1024}, {C:512})   y = x·Wᵀ + b', 540, 900, { size: 22, mono: true, align: 'center' }); }
+        }
+        ctx.restore();
+      }
+      // matmul
+      const M = S.vis(5, 6);
+      if (M > 0) {
+        ctx.save(); ctx.globalAlpha = M;
+        const y0 = 330;
+        mat(ctx, 140, y0 + 60, 300, 196, { rows: 14, cols: 20, seed: 83, left: ['{T:49}', COL.T], top: ['{C:512}', COL.C], title: 'X (frames)' });
+        txt(ctx, '×', 500, y0 + 170, { size: 60, align: 'center', base: 'middle', color: COL.dim });
+        mat(ctx, 600, y0, 380, 300, { rows: 20, cols: 25, seed: 84, left: ['{C:512}', COL.C], top: ['{C:1024}', COL.C], title: 'W', titleColor: COL.K, stroke: rgba(COL.K, 0.7) });
+        txt(ctx, '=', 1050, y0 + 170, { size: 60, align: 'center', base: 'middle', color: COL.dim });
+        const ya = S.p(5, 0.8, 5.5);
+        ctx.globalAlpha = M * ya;
+        mat(ctx, 1170, y0 + 60, 380, 196, { rows: 14, cols: 25, seed: 85, left: ['{T:49}', COL.T], top: ['{C:1024}', COL.C], title: 'Y' });
+        ctx.globalAlpha = M;
+        // row × column → cell
+        const k = S.p(5, 0.6, 3);
+        if (k > 0) {
+          ctx.globalAlpha = M * k;
+          rrect(ctx, 137, y0 + 60 + 4 * 14 - 2, 306, 18, 4, null, COL.A, 3);
+          rrect(ctx, 600 + 9 * 15.2 - 2, y0 - 3, 19, 306, 4, null, COL.A, 3);
+          ctx.globalAlpha = M * ya * k;
+          rrect(ctx, 1170 + 9 * 15.2 - 2, y0 + 60 + 4 * 14 - 2, 19, 18, 4, COL.A, COL.A, 2);
+        }
+        ctx.globalAlpha = M;
+        const fa = S.p(5, 0.8, 8);
+        const o = { size: 38, mono: true };
+        const pA = '({T:49} × ', pB = '{C:512}', pC = ')  ×  (', pD = '{C:512}', pE = ' × {C:1024})  =  ({T:49} × {C:1024})';
+        const full = pA + pB + pC + pD + pE, fw = mwidth(ctx, full, o), xs = W / 2 - fw / 2;
+        mtxt(ctx, full, xs, 800, { ...o, alpha: fa });
+        const ca = S.p(5, 0.6, 10);
+        if (ca > 0) {
+          ctx.globalAlpha = M * ca;
+          const x1 = xs + mwidth(ctx, pA, o), w1 = mwidth(ctx, pB, o);
+          const x2 = xs + mwidth(ctx, pA + pB + pC, o), w2 = mwidth(ctx, pD, o);
+          rrect(ctx, x1 - 8, 758, w1 + 16, 58, 8, null, COL.R, 3);
+          rrect(ctx, x2 - 8, 758, w2 + 16, 58, 8, null, COL.R, 3);
+          line(ctx, x1 + w1 / 2, 820, x1 + w1 / 2, 838, COL.R, 2); line(ctx, x2 + w2 / 2, 820, x2 + w2 / 2, 838, COL.R, 2);
+          line(ctx, x1 + w1 / 2, 838, x2 + w2 / 2, 838, COL.R, 2);
+          txt(ctx, 'inner sizes match → they disappear', (x1 + x2 + w2) / 2, 878, { size: 26, color: COL.R, align: 'center', weight: 600 });
+        }
+        ctx.restore();
+      }
+      // same weights for every frame
+      const P = S.p(6);
+      if (P > 0) {
+        ctx.save(); ctx.globalAlpha = P;
+        for (let f = 0; f < 6; f++) {
+          const y = 250 + f * 70, a = S.p(6, 0.4, 1 + f * 0.4);
+          ctx.globalAlpha = P * a;
+          cells(ctx, 160, y, 1, 16, 26, 44, (r, c) => vcol(noise(f, c, 87) * 0.9, 0.9), 3);
+          arrow(ctx, 590, y + 22, 760, y + 22, { color: rgba(COL.K, 0.8), lw: 2 });
+          cells(ctx, 800, y, 1, 22, 26, 44, (r, c) => vcol(noise(f, c, 88) * 0.9, 0.9), 3);
+          txt(ctx, 'frame ' + (f + 1), 140, y + 30, { size: 20, align: 'right', color: COL.T, weight: 600 });
+        }
+        ctx.globalAlpha = P;
+        box(ctx, 610, 180, 130, 520, null, { fill: rgba(COL.K, 0.08), stroke: COL.K });
+        txt(ctx, 'same W', 675, 730, { size: 26, weight: 700, color: COL.K, align: 'center' });
+        dimTop(ctx, 160, 244, 416, '{C:512}', COL.C, 24);
+        dimTop(ctx, 800, 244, 572, '{C:1024}', COL.C, 24);
+        mtxt(ctx, '({B:B}, {T:49}, {C:512})  →  ({B:B}, {T:49}, {C:1024})', W / 2, 810, { size: 40, mono: true, align: 'center', alpha: S.p(6, 0.6, 4) });
+        mtxt(ctx, 'only the last axis changes  ·  weights: 512 × 1024 + 1024 = 525,312', W / 2, 870, { size: 26, align: 'center', color: COL.dim, alpha: S.p(6, 0.6, 6) });
+        const h = S.p(6, 0.6, 10);
+        rrect(ctx, 1450, 330, 380, 200, 16, rgba(COL.C, 0.08 * h), rgba(COL.C, h), 3);
+        txt(ctx, 'hidden size', 1640, 400, { size: 28, weight: 600, align: 'center', color: COL.dim, alpha: h });
+        txt(ctx, '1024', 1640, 480, { size: 72, weight: 800, align: 'center', color: COL.C, alpha: h, mono: true });
+        ctx.restore();
+      }
+    },
+  });
 
   // ------------------------------------------------------------------ 7 masking
-  const STARTS = [4, 12, 33, 55, 61, 82], NCOL = 100;
-  const masked = c => STARTS.some(s => c >= s && c < s + 10);
+  const MSTART = [4, 20, 26];
+  const MASKED = new Set();
+  MSTART.forEach(s => { for (let k = 0; k < 10; k++) if (s + k < 49) MASKED.add(s + k); });
   S_.push({
-    id: 'x_mask', chapter: 7, title: 'Masking (pre-training)', code: 'model.masked_spec_embed: (1024,)',
+    id: 'masking', chapter: 7, title: 'Masking (pre-training)',
+    code: 'model.masked_spec_embed: (1024,)',
     beats: [
-      "During pre-training, some frames are hidden before they reach the transformer. Each frame is picked as the start of a span with a small probability, and a run of ten frames is hidden from every start. Spans may overlap, and in the end roughly half of all frames are covered.",
-      "Hidden frames aren't set to zero. They're overwritten by one learned vector of one thousand and twenty-four numbers, the same at every masked position. The transformer then has to work out what belongs in the gaps from the surrounding context. When the model is fine-tuned, a much lighter version of the same masking acts as a regularizer.",
+      "During pre-training, and in a lighter form as a regularizer during fine-tuning, some frames are masked before they enter the transformer.",
+      "The recipe from the paper: every frame is picked as a starting point with probability six and a half percent. From each starting point, a span of ten consecutive frames is masked. Spans are allowed to overlap.",
+      "Masked frames are not set to zero. They're overwritten by a single learned vector of one thousand and twenty-four numbers, the same vector at every masked position. It's the model's way of saying: something was here, but you can't see it.",
+      "With these settings, roughly half of all frames end up masked. During pre-training, the transformer's job is to work out what belongs in those gaps, using only the surrounding context. And the shape, of course, is unchanged.",
     ],
-    hud: { stage: 3, shape: RES },
+    hud: { stage: 3, shape: '({B:B}, {T:49}, {C:1024})' },
     draw(ctx, S) {
-      const cam = X.world(ctx, S, [[0, -1, { yaw: 0.35, pitch: 0.16, dist: 1500, tx: 0, ty: 30, tz: 0, cx: 960, cy: 500 }], [0, 6, { yaw: 0.12, dist: 1400 }], [1, 0, { yaw: -0.2, pitch: 0.22, dist: 1500 }]], { floorY: -260 });
-      const pick = i => clamp((S.T(0) - 3 - i * 0.7) / 0.4), fillAt = (c) => { const i = STARTS.findIndex(s => c >= s && c < s + 10); return i < 0 ? 0 : clamp((S.T(0) - 3.4 - i * 0.7 - (c - STARTS[i]) * 0.05) / 0.25); };
-      const mv = S.p(1, 0.6, 0.6);
-      S3.block(ctx, cam, { x: 0, y: 0, z: 0, w: 1100, h: 300, d: 60, cells: [10, NCOL, 2], alpha: S.p(0, 0.6, 0), reveal: S.l(0, 1.4, 0.2), color: THEME.a,
-        fn: (r, c, f) => {
-          const k = f === 0 ? fillAt(c) : (masked(c) && S.T(0) > 9 ? 1 : 0);
-          return k > 0.5 ? rgba(COL.M, 0.55 + 0.35 * (noise(r, 0, 7) * 0.5 + 0.5)) : vcol(noise(r + f * 31, c, 131) * 0.95, 0.9);
-        },
-        tags: { w: ['T', 201], h: ['C', 1024], d: ['B', 'B'] } });
-      // span-start markers
-      STARTS.forEach((st, i) => {
-        const k = pick(i);
-        if (k <= 0) return;
-        const p = cam.p(-550 + (st + 0.5) * 11, -175, 30);
-        ctx.save(); ctx.globalAlpha *= k; ctx.fillStyle = COL.K; ctx.beginPath(); ctx.moveTo(p[0], p[1] - 4); ctx.lineTo(p[0] - 10, p[1] + 14); ctx.lineTo(p[0] + 10, p[1] + 14); ctx.fill(); ctx.restore();
-        const q = cam.p(-550 + (st + 10) * 11, -175, 30);
-        line(ctx, p[0], p[1] + 22, q[0], q[1] + 22, rgba(COL.M, k), 3);
+      const n = 49, cw = 32, x0 = (W - n * cw) / 2, y0 = 360, rows = 9, ch = 24;
+      const a0 = S.p(0);
+      const scan = S.l(1, 3.5, 2);
+      const grow = easeIO(S.l(1, 2.5, 6.5));
+      const rep = easeIO(S.l(2, 1.5, 1));
+      ctx.save(); ctx.globalAlpha = a0;
+      for (let f = 0; f < n; f++) {
+        const isM = MASKED.has(f);
+        let spanOn = false;
+        MSTART.forEach(s => { if (f >= s && f < s + 10 && (f - s) < grow * 10 + 0.5) spanOn = true; });
+        for (let r = 0; r < rows; r++) {
+          let c = vcol(noise(f, r, 91) * 0.9, 0.9);
+          if (spanOn && isM) c = rep > 0 ? E.mix('#3a2a4a', COL.M, 0.25 + 0.5 * rep * (0.5 + 0.5 * noise(0, r, 5))) : rgba(COL.M, 0.25);
+          ctx.fillStyle = c; ctx.fillRect(x0 + f * cw + 2, y0 + r * ch + 2, cw - 4, ch - 4);
+        }
+        if (spanOn && isM) { ctx.strokeStyle = rgba(COL.M, 0.9); ctx.lineWidth = 2; ctx.strokeRect(x0 + f * cw + 1, y0 + 1, cw - 2, rows * ch - 2); }
+        // scan marker
+        if (S.b >= 1 && Math.floor(scan * n) === f && scan < 1) rrect(ctx, x0 + f * cw - 2, y0 - 6, cw + 4, rows * ch + 12, 4, null, COL.K, 3);
+      }
+      dimTop(ctx, x0, y0 - 6, n * cw, '{T:49} frames', COL.T, 26);
+      dimLeft(ctx, x0 - 6, y0, rows * ch, '{C:1024}', COL.C, 24);
+      // start markers
+      MSTART.forEach((s, i) => {
+        if (scan * n < s + 1 && S.b <= 1) return;
+        const x = x0 + s * cw + cw / 2;
+        ctx.fillStyle = COL.K; ctx.beginPath(); ctx.moveTo(x, y0 + rows * ch + 16); ctx.lineTo(x - 12, y0 + rows * ch + 38); ctx.lineTo(x + 12, y0 + rows * ch + 38); ctx.fill();
+        txt(ctx, 'start', x, y0 + rows * ch + 66, { size: 20, weight: 700, align: 'center', color: COL.K });
+        const ga = S.p(1, 0.5, 6.5);
+        if (ga > 0) {
+          const xe = x0 + Math.min(n, s + 10 * grow) * cw;
+          ctx.globalAlpha = a0 * ga;
+          line(ctx, x0 + s * cw + 4, y0 + rows * ch + 90 + i * 16, xe - 4, y0 + rows * ch + 90 + i * 16, COL.M, 4);
+          ctx.globalAlpha = a0;
+        }
       });
-      txt(ctx, 'span starts (p ≈ 6.5 % per frame) · 10 frames each', 960, 830, { size: 26, weight: 700, color: COL.K, align: 'center', alpha: S.p(0, 0.6, 3) * (1 - mv) });
-      txt(ctx, '≈ 50 % of frames hidden', 960, 880, { size: 30, weight: 800, color: COL.M, align: 'center', alpha: S.p(0, 0.6, 9) * (1 - mv) });
-      // the learned mask vector m
+      const t1 = S.p(1, 0.6, 1);
+      mtxt(ctx, 'P(frame is a span start) = {K:p = 0.065}      span length {M:M = 10}', W / 2, 220, { size: 32, align: 'center', alpha: t1 * (1 - S.p(2)), weight: 600 });
+      // mask vector
+      const mv = S.p(2, 0.8, 4);
       if (mv > 0) {
-        S3.block(ctx, cam, { x: 0, y: 330, z: 0, w: 22, h: 170, d: 22, cells: [10, 1, 1], alpha: mv, color: COL.M, glow: COL.M, fn: r => rgba(COL.M, 0.55 + 0.35 * (noise(r, 0, 7) * 0.5 + 0.5)), tags: { h: ['C', 1024] } });
-        S3.caption(ctx, cam, 50, 440, 0, 'one learned vector m', { size: 26, mono: false, weight: 700, color: COL.M, align: 'left', alpha: mv });
-        STARTS.filter((_, i) => i % 2 === 0).forEach((st, i) => S3.path3(ctx, cam, [[0, 245, 20], [-550 + (st + 5) * 11, 160, 32]], { color: COL.M, lw: 2, p: S.l(1, 0.8, 1.5 + i * 0.4), alpha: mv * 0.8, dash: [6, 6] }));
-        txt(ctx, 'context on both sides fills the gaps', 960, 860, { size: 26, weight: 700, align: 'center', color: COL.text, alpha: S.p(1, 0.6, 6) });
-        txt(ctx, 'fine-tuning: lighter masking (Hugging Face default 7.5 %) as a regularizer', 960, 905, { size: 22, color: COL.dim, align: 'center', alpha: S.p(1, 0.6, 9) });
+        ctx.globalAlpha = a0 * mv * (1 - S.p(3, 0.6));
+        mtxt(ctx, 'every masked frame  ←  the same learned vector {M:m} ∈ ℝ{C:1024}', W / 2, 220, { size: 32, align: 'center', weight: 600 });
+        ctx.globalAlpha = a0;
       }
+      // stats
+      const st = S.p(3, 0.8);
+      if (st > 0) {
+        ctx.globalAlpha = a0 * st;
+        mtxt(ctx, `masked: {M:${MASKED.size}} of {T:49} frames  (${Math.round(MASKED.size / 49 * 100)}% here; ≈ 49% on average)`, W / 2, 220, { size: 32, align: 'center', weight: 600 });
+        rrect(ctx, 260, 800, 1400, 120, 14, COL.panel, COL.line, 2);
+        mtxt(ctx, 'shape unchanged: ({B:B}, {T:49}, {C:1024})', W / 2, 848, { size: 32, mono: true, align: 'center' });
+        txt(ctx, "Hugging Face note: mask_time_prob ≈ fraction of frames masked (default 0.05 when fine-tuning), not the per-frame start probability.", W / 2, 895, { size: 24, align: 'center', color: COL.dim });
+      }
+      ctx.restore();
     },
   });
 
-  // ------------------------------------------------------------------ 8 positional convolution
+  // ------------------------------------------------------------------ 8 positional conv
   S_.push({
-    id: 'x_posconv', chapter: 8, title: 'Positional convolution', code: 'model.encoder.pos_conv_embed',
+    id: 'posconv', chapter: 8, title: 'Positional convolution',
+    code: 'model.encoder.pos_conv_embed',
     beats: [
-      "Attention, as we'll see, treats its input as an unordered set. Shuffle the frames and it wouldn't notice. So before the transformer, X L S R mixes in position with another convolution, this time sliding over time across the one thousand and twenty-four dimensional frames.",
-      "Its kernel is one hundred and twenty-eight frames wide: about two and a half seconds. The frames are transposed to channels first, padded with sixty-four frames of zeros on each side, convolved, and the one extra frame at the end is trimmed off. Still two hundred and one.",
-      "A full convolution from one thousand and twenty-four to one thousand and twenty-four channels this wide would need one hundred and thirty-four million weights. So the channels are split into sixteen groups of sixty-four, and each group only talks to itself. That brings it down to about eight point four million.",
-      "The result goes through a GELU and is added to the input: a residual connection. In X L S R there's no layer norm at this point. Normalization happens inside every transformer block instead, plus once at the very end. And because this positional signal comes from a convolution, it's relative, and it works for clips of any length.",
+      "Before the transformer, there's one problem to fix. Attention, as we'll see, treats its input as an unordered set. If you shuffled the frames, it wouldn't notice. So we have to inject information about position.",
+      "X L S R does this with another convolution, but this time sliding along the time axis of the one thousand and twenty-four dimensional frames. Its kernel is one hundred and twenty-eight frames wide: about two and a half seconds of audio.",
+      "A convolution wants channels first, so the frames are transposed to B, by ten twenty-four, by forty-nine. To keep the length unchanged, the input is padded with sixty-four frames of zeros on each side. That gives fifty outputs instead of forty-nine, so the last one is trimmed off, and the result is transposed back to B, by forty-nine, by ten twenty-four.",
+      "A full convolution from one thousand and twenty-four to one thousand and twenty-four channels, with such a wide kernel, would need one hundred and thirty-four million weights. So the channels are split into sixteen groups of sixty-four, and each group only talks to itself. That cuts the weights by a factor of sixteen, to about eight point four million.",
+      "The result goes through GELU, and is added to the input. That's called a residual connection: the original frames are kept, and position-aware information is added on top. In X L S R there is no layer norm at this point: normalization happens inside every transformer block instead, and once more at the very end. The shape is still B by forty-nine by one thousand and twenty-four.",
+      "Because this positional signal comes from a convolution, rather than a fixed table of positions, it's relative. It tells each frame about its neighbourhood, and it works for clips of any length.",
     ],
-    hud: S => ({ stage: 4, shape: S.b === 1 ? '({B:B}, {C:1024}, {T:201})' : RES, label: S.b === 1 ? 'channels first' : null }),
+    hud: { stage: 4, shape: '({B:B}, {T:49}, {C:1024})' },
     draw(ctx, S) {
-      const g = S.p(2, 0.6, 0) * (1 - S.p(3, 0.6, 0));
-      const cam = X.world(ctx, S, [[0, -1, { yaw: 0.4, pitch: 0.2, dist: 1700, tx: 0, ty: 20, tz: 0, cx: 960, cy: 520 }], [1, 0, { yaw: 0.15, pitch: 0.14, dist: 1600 }],
-        [2, 0, { yaw: 0.5, dist: 2300, tx: -500 }], [3, 0, { yaw: -0.25, pitch: 0.24, dist: 1900, tx: 0 }]], { floorY: -280 });
-      const shuffle = S.b === 0 ? easeIO((S.T(0) - 2.5) / 0.8) * (1 - easeIO((S.T(0) - 5.2) / 0.8)) : 0;
-      // the tensor, coloured by channel group (16 bands)
-      const grpCol = r => E.mix(THEME.a, THEME.b, (r % 16) / 15);
-      const main = 1 - S.p(3, 0.6, 3);
-      S3.block(ctx, cam, { x: 0, y: 0, z: 0, w: 900, h: 320, d: 60, cells: [16, 40, 2], alpha: S.p(0, 0.6, 0) * main, color: THEME.a,
-        fn: (r, c, f) => { const cc = shuffle > 0 ? (c * 17 + 5) % 40 : c; return f === 0 && S.b >= 2 ? rgba(grpCol(r), 0.35 + 0.5 * (noise(r, cc, 141) * 0.5 + 0.5)) : vcol(noise(r + f * 31, cc, 141) * 0.95, 0.9); },
-        tags: S.b === 1 ? { w: ['T', 201], h: ['C', 1024], d: ['B', 'B'] } : { w: ['T', 201], h: ['C', 1024], d: ['B', 'B'] } });
-      if (shuffle > 0.3) S3.caption(ctx, cam, 0, 230, 0, 'shuffled frames: attention would not notice', { size: 26, mono: false, weight: 700, color: COL.R, alpha: shuffle });
-      // padding + sliding window
-      const pad = S.p(1, 0.6, 2.5) * (1 - S.p(2, 0.5, 0));
-      if (pad > 0) {
-        [-1, 1].forEach(sd => S3.block(ctx, cam, { x: sd * (450 + 145), y: 0, z: 0, w: 290, h: 320, d: 60, cells: [4, 10, 1], alpha: pad * 0.9, color: COL.faint, fn: () => 'rgba(90,100,125,0.35)', tags: sd < 0 ? { w: ['T', 64] } : null }));
-        S3.caption(ctx, cam, -595, 230, 0, '64 zero frames', { size: 22, mono: false, weight: 700, color: COL.dim, alpha: pad });
-        S3.caption(ctx, cam, 595, 230, 0, '64 zero frames', { size: 22, mono: false, weight: 700, color: COL.dim, alpha: pad });
+      // set illustration
+      const A = S.vis(0, 1);
+      if (A > 0) {
+        ctx.save(); ctx.globalAlpha = A;
+        const ord = [0, 1, 2, 3, 4, 5], shuf = [3, 0, 5, 1, 4, 2];
+        const cols = ['#58a6ff', '#7ee787', '#ffa657', '#d2a8ff', '#ff7b9c', '#f2cc60'];
+        const t = easeIO(S.l(0, 1.5, 4));
+        txt(ctx, 'frames in order', 300, 330, { size: 28, weight: 600, color: COL.dim, align: 'right' });
+        txt(ctx, 'shuffled', 300, 590, { size: 28, weight: 600, color: COL.dim, align: 'right', alpha: t });
+        ord.forEach(i => {
+          rrect(ctx, 360 + i * 130, 280, 100, 90, 12, rgba(cols[i], 0.2), cols[i], 3);
+          txt(ctx, String(i + 1), 410 + i * 130, 328, { size: 36, weight: 800, align: 'center', base: 'middle', color: cols[i] });
+          const j = shuf.indexOf(i);
+          const x = lerp(360 + i * 130, 360 + j * 130, t), y = lerp(280, 540, t);
+          ctx.globalAlpha = A * t;
+          rrect(ctx, x, y, 100, 90, 12, rgba(cols[i], 0.2), cols[i], 3);
+          txt(ctx, String(i + 1), x + 50, y + 48, { size: 36, weight: 800, align: 'center', base: 'middle', color: cols[i] });
+          ctx.globalAlpha = A;
+        });
+        const b = S.p(0, 0.6, 6);
+        ctx.globalAlpha = A * b;
+        box(ctx, 1260, 380, 480, 180, ['attention sees', 'the same set of vectors'], { size: 34, color: COL.H, stroke: COL.H });
+        txt(ctx, '→ position must be added explicitly', W / 2, 800, { size: 34, weight: 700, align: 'center', color: COL.A, alpha: S.p(0, 0.6, 9) });
+        ctx.restore();
       }
-      const win = S.p(1, 0.6, 0.8) * (1 - S.p(2, 0.5, 0));
-      if (win > 0) {
-        const span = 900 * 128 / 201, x = lerp(-740 + span / 2, 740 - span / 2, (Math.sin(S.local * 0.6) + 1) / 2);
-        S3.block(ctx, cam, { x, y: 0, z: 0, w: span, h: 344, d: 84, cells: [1, 1, 1], alpha: win * 0.55, color: COL.K, fn: () => rgba(COL.K, 0.12), glow: COL.K });
-        S3.caption(ctx, cam, x, 250, 0, 'kernel: 128 frames ≈ 2.56 s', { size: 26, mono: false, weight: 700, color: COL.K, alpha: win });
-        mtxt(ctx, '201 + 2·64 − 128 + 1 = {T:202}  →  trim the last frame  →  {T:201}', 960, 860, { size: 30, mono: true, align: 'center', alpha: S.p(1, 0.6, 6.5) });
-      }
-      // grouped convolution: a block-diagonal weight
-      if (g > 0) {
-        X.card(ctx, 960, 200, 860, 620, g);
-        txt(ctx, 'which input channels feed which outputs', 1000, 255, { size: 26, weight: 700, alpha: g });
-        const gx = 1000, gy = 290, cs = 24;
-        for (let i = 0; i < 16; i++) for (let j = 0; j < 16; j++) {
-          const on = i === j, k = easeOut4((S.T(2) - 1.4 - Math.min(i, j) * 0.08) / 0.4);
-          rrect(ctx, gx + j * cs, gy + i * cs, cs - 3, cs - 3, 4, on ? rgba(E.mix(THEME.a, THEME.b, i / 15), 0.85 * k * g) : `rgba(90,100,125,${0.12 * g})`, null);
+      // conv over time with padding
+      const Bv = S.vis(1, 3);
+      if (Bv > 0) {
+        ctx.save(); ctx.globalAlpha = Bv;
+        const tot = 177, cw = 1640 / tot, x0 = 140, y0 = 330, rows = 12, ch = 22;
+        const padA = S.ps(2, 1);
+        for (let c = 0; c < tot; c++) {
+          const real = c >= 64 && c < 64 + 49;
+          if (!real && padA <= 0) continue;
+          for (let r = 0; r < rows; r++) {
+            ctx.fillStyle = real ? vcol(noise(c, r, 95) * 0.9, 0.9) : `rgba(60,70,90,${0.5 * padA})`;
+            ctx.fillRect(x0 + c * cw + 0.5, y0 + r * ch + 1, cw - 1, ch - 2);
+          }
         }
-        txt(ctx, '16 groups × 64 channels', gx + 192, gy + 420, { size: 22, weight: 700, align: 'center', color: COL.dim, alpha: g });
-        mtxt(ctx, 'full: 1024 × 1024 × 128', 1440, 380, { size: 26, mono: true, align: 'left', alpha: S.p(2, 0.6, 2) });
-        txt(ctx, '= 134,217,728', 1440, 420, { size: 30, mono: true, weight: 700, color: COL.R, alpha: S.p(2, 0.6, 3) });
-        const xk = S.p(2, 0.4, 6.5);
-        if (xk > 0) line(ctx, 1440, 412, 1440 + 300 * xk, 412, COL.R, 4);
-        mtxt(ctx, 'grouped: 1024 × {A:64} × 128', 1440, 510, { size: 26, mono: true, alpha: S.p(2, 0.6, 7.5) });
-        txt(ctx, '≈ 8.39 M', 1440, 556, { size: 40, mono: true, weight: 700, color: THEME.a, alpha: S.p(2, 0.6, 9) });
-        txt(ctx, '(8,388,608 + bias + weight-norm gain)', 1440, 595, { size: 18, mono: true, color: COL.dim, alpha: S.p(2, 0.6, 9.5) });
+        dimTop(ctx, x0 + 64 * cw, y0 - 6, 49 * cw, '{T:49} real frames', COL.T, 24);
+        dimLeft(ctx, x0 - 6, y0, rows * ch, '{C:1024}', COL.C, 24);
+        if (padA > 0) {
+          ctx.globalAlpha = Bv * padA;
+          dimBottom(ctx, x0, y0 + rows * ch + 6, 64 * cw, '64 zeros', COL.dim, 22);
+          dimBottom(ctx, x0 + 113 * cw, y0 + rows * ch + 6, 64 * cw, '64 zeros', COL.dim, 22);
+          ctx.globalAlpha = Bv;
+        }
+        // kernel window
+        const ka = S.p(1, 0.6, 4);
+        if (ka > 0) {
+          const pos = S.b >= 2 ? Math.floor(S.l(2, 4, 3) * 49) : 20;
+          const kx = x0 + pos * cw + (S.b >= 2 ? 0 : 64 * cw - 64 * cw);
+          ctx.globalAlpha = Bv * ka;
+          rrect(ctx, kx, y0 - 10, 128 * cw, rows * ch + 20, 10, rgba(COL.K, 0.1), COL.K, 4);
+          txt(ctx, 'kernel: 128 frames ≈ 2.56 s', kx + 64 * cw, y0 + rows * ch + 80, { size: 26, weight: 700, align: 'center', color: COL.K });
+          ctx.globalAlpha = Bv;
+        }
+        // the transpose to channels-first, drawn when the voice says it
+        const tp = S.b === 2 ? S.ps(2, 0, 0.5) : 0;
+        if (tp > 0) {
+          ctx.globalAlpha = Bv * tp;
+          chip(ctx, 560, 232, '({B:B}, {T:49}, {C:1024})', { markup: true, size: 26, mono: true, align: 'center' });
+          arrow(ctx, 720, 232, 860, 232, { color: COL.K, p: tp });
+          txt(ctx, 'transpose', 790, 212, { size: 22, weight: 700, align: 'center', color: COL.K });
+          chip(ctx, 1030, 232, '({B:B}, {C:1024}, {T:49})', { markup: true, size: 26, mono: true, align: 'center', stroke: COL.K });
+          txt(ctx, 'rows = channels, columns = frames', 1230, 240, { size: 22, color: COL.dim });
+          ctx.globalAlpha = Bv;
+        }
+        const fa = S.b === 2 ? S.ps(2, 2) : 0;
+        if (fa > 0) {
+          ctx.globalAlpha = Bv * fa;
+          mtxt(ctx, 'length:  {T:49} + 64 + 64 = 177   →   177 − {K:128} + 1 = {T:50}   →   trim the last frame  →  {T:49}', W / 2, 790, { size: 30, mono: true, align: 'center' });
+          mtxt(ctx, 'then transpose back:  ({B:B}, {C:1024}, {T:49})  →  ({B:B}, {T:49}, {C:1024})', W / 2, 850, { size: 28, mono: true, align: 'center', alpha: S.ps(2, 2, 0.6, 3) });
+          txt(ctx, 'Conv1d(1024, 1024, kernel_size=128, padding=64, groups=16)   weight: (1024, 64, 128)', W / 2, 900, { size: 22, mono: true, align: 'center', color: COL.dim });
+          ctx.globalAlpha = Bv;
+        }
+        ctx.restore();
       }
-      // residual add
-      const ra = S.p(3, 0.7, 0);
-      if (ra > 0) {
-        const m = easeIO((S.T(3) - 3.2) / 1.0);
-        S3.block(ctx, cam, { x: lerp(-340, 0, m), y: 0, z: 0, w: 520, h: 300, d: 60, cells: [10, 20, 2], seed: 151, alpha: ra, color: THEME.a, tags: m < 0.5 ? { w: ['T', 201], h: ['C', 1024] } : null });
-        S3.block(ctx, cam, { x: lerp(340, 0, m), y: lerp(0, 0, m), z: lerp(0, 4, m), w: 520, h: 300, d: 60, cells: [10, 20, 2], seed: 152, alpha: ra * (1 - 0.6 * m), color: COL.K, fn: (r, c, f) => rgba(COL.K, 0.25 + 0.4 * (noise(r + f, c, 152) * 0.5 + 0.5)) });
-        S3.caption(ctx, cam, -340, 230, 0, 'frames', { size: 24, mono: false, weight: 700, alpha: ra * clamp(1 - m * 2.5) });
-        S3.caption(ctx, cam, 340, 230, 0, 'GELU(pos-conv(frames))', { size: 24, mono: false, weight: 700, color: COL.K, alpha: ra * clamp(1 - m * 2.5) });
-        const pl = cam.p(0, 0, 80);
-        if (m > 0.05 && m < 1) txt(ctx, '+', pl[0], pl[1] + 20, { size: 90, weight: 800, align: 'center', color: COL.text, alpha: 1 - m });
-        S3.caption(ctx, cam, 0, 230, 0, RES, { size: 30, alpha: clamp((m - 0.75) * 4) });
-        txt(ctx, 'no LayerNorm here: X L S R normalizes inside each block (pre-norm) and once at the end'.replace('X L S R', 'XLS-R'), 960, 880, { size: 24, weight: 600, align: 'center', color: COL.dim, alpha: S.p(3, 0.6, 5.5) });
+      // groups
+      const G = S.vis(3, 4);
+      if (G > 0) {
+        ctx.save(); ctx.globalAlpha = G;
+        const x0 = 260, y0 = 220, sz = 560, g = 16, bs = sz / g;
+        rrect(ctx, x0 - 4, y0 - 4, sz + 8, sz + 8, 8, COL.bg2, COL.line, 2);
+        const fill = easeIO(S.l(3, 3, 2));
+        for (let i = 0; i < g; i++) for (let j = 0; j < g; j++) {
+          const diag = i === j;
+          const a = diag ? 1 : 1 - fill;
+          if (a <= 0.02) continue;
+          ctx.fillStyle = diag ? rgba(COL.H, 0.75) : rgba(COL.dim, 0.35 * a);
+          ctx.fillRect(x0 + j * bs + 1, y0 + i * bs + 1, bs - 2, bs - 2);
+        }
+        dimTop(ctx, x0, y0 - 6, sz, '{C:1024} in', COL.C, 24);
+        dimLeft(ctx, x0 - 6, y0, sz, '{C:1024} out', COL.C, 24);
+        txt(ctx, 'each block: 64 × 64 channels × 128 taps', x0 + sz / 2, y0 + sz + 50, { size: 24, align: 'center', color: COL.H, alpha: fill });
+        const t1 = S.p(3, 0.6, 1);
+        mtxt(ctx, 'full:  1024 × 1024 × 128  =  134.2 M', 1000, 380, { size: 36, mono: true, alpha: t1 });
+        if (fill > 0.5) line(ctx, 990, 368, 1000 + 700 * clamp((fill - 0.5) * 2), 368, COL.R, 4);
+        mtxt(ctx, '16 groups:  1024 × {H:64} × 128  =  {H:8.39 M}', 1000, 480, { size: 36, mono: true, alpha: S.p(3, 0.6, 7) });
+        txt(ctx, 'channel group k only mixes with group k', 1000, 560, { size: 26, color: COL.dim, alpha: S.p(3, 0.6, 7) });
+        ctx.restore();
+      }
+      // residual flow
+      const R = S.p(4);
+      if (R > 0) {
+        ctx.save(); ctx.globalAlpha = R * (1 - 0.0 * S.p(5));
+        const y = 420;
+        chip(ctx, 150, y, '({B:B}, {T:49}, {C:1024})', { markup: true, size: 24, mono: true, align: 'left' });
+        arrow(ctx, 380, y, 560, y, {});
+        box(ctx, 570, y - 70, 380, 140, ['Conv1d, k=128, groups=16', '1024 → 1024 channels'], { size: 26, color: COL.K });
+        arrow(ctx, 960, y, 1030, y, {});
+        box(ctx, 1040, y - 55, 150, 110, 'GELU', { size: 30, color: COL.A });
+        arrow(ctx, 1200, y, 1290, y, {});
+        ctx.strokeStyle = COL.text; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(1320, y, 28, 0, 7); ctx.stroke();
+        txt(ctx, '+', 1320, y + 2, { size: 40, weight: 700, align: 'center', base: 'middle' });
+        // the residual path lights up, and a pulse runs along it, on "residual connection"
+        const path = [[450, y], [450, y + 170], [1320, y + 170], [1320, y + 30]];
+        const rs = S.ps(4, 1), rp = S.b === 4 ? Math.sin(Math.PI * clamp((S.T(4) - S.st(4, 1)) / 3.5)) : 0;
+        parrow(ctx, path, { color: COL.B, lw: 3 + 3 * rp });
+        if (rp > 0) {
+          const segs = path.slice(1).map((q, i) => [path[i], q, Math.hypot(q[0] - path[i][0], q[1] - path[i][1])]);
+          let d = ((S.T(4) - S.st(4, 1)) / 1.6 % 1) * segs.reduce((t, g) => t + g[2], 0);
+          for (const [p0, p1, len] of segs) {
+            if (d <= len) { glow(ctx, lerp(p0[0], p1[0], d / len), lerp(p0[1], p1[1], d / len), 34, COL.B, 0.9 * rp); break; }
+            d -= len;
+          }
+        }
+        txt(ctx, 'residual: keep the original x', 915, y + 210, { size: 26, color: COL.B, align: 'center', weight: 600, alpha: 0.5 + 0.5 * rs });
+        arrow(ctx, 1352, y, 1420, y, {});
+        const sp = S.b === 4 ? Math.sin(Math.PI * clamp((S.T(4) - S.st(4, 3)) / 2)) : 0;
+        if (sp > 0) glow(ctx, 1600, y, 200, COL.C, 0.35 * sp);
+        chip(ctx, 1430, y, '({B:B}, {T:49}, {C:1024})', { markup: true, size: 24, mono: true, align: 'left', stroke: sp > 0 ? COL.C : undefined });
+        wrap(ctx, 'no LayerNorm here: each transformer layer normalises its own input (ch. 11)', 1380, y + 90, 500, 32, { size: 24, weight: 700, color: COL.dim, alpha: S.ps(4, 2) });
+        mtxt(ctx, 'x  ←  x + GELU( conv(x) )', W / 2, 250, { size: 38, mono: true, align: 'center', weight: 600, alpha: S.p(4, 0.6, 3) });
+        const c = S.p(5, 0.6, 0.5);
+        if (c > 0) {
+          ctx.globalAlpha = R * c;
+          rrect(ctx, 300, 760, 1320, 120, 14, COL.panel, rgba(COL.A, 0.6), 2);
+          txt(ctx, 'relative position from the neighbourhood · works for any clip length', W / 2, 830, { size: 30, weight: 600, align: 'center' });
+        }
+        ctx.restore();
       }
     },
   });
 
-  // ------------------------------------------------------------------ 9 self-attention from scratch (toy numbers)
-  const XT = [[1.0, 0.2], [0.4, 0.9], [-0.6, 0.5], [0.8, -0.7]];
-  const WQ = [[0.9, 0.1], [-0.3, 0.8]], WK = [[0.7, -0.4], [0.2, 0.9]], WV = [[1.0, 0.5], [-0.5, 0.6]];
+  // ------------------------------------------------------------------ 9 attention toy
+  const X = [[1.5, 0.4], [1.2, 0.8], [-0.6, 1.5], [-0.9, 1.1]];
+  const WQ = [[1.0, 0.4], [0.2, 1.1]], WK = [[1.2, 0.1], [0.3, 0.9]], WV = [[0.9, -0.2], [0.3, 1.0]];
   const mm = (A, B) => A.map(r => B[0].map((_, j) => r.reduce((s, v, k) => s + v * B[k][j], 0)));
-  const QT = mm(XT, WQ), KT = mm(XT, WK), VT = mm(XT, WV);
-  const SC = QT.map(q => KT.map(k => (q[0] * k[0] + q[1] * k[1]) / Math.SQRT2));
-  const AT = SC.map(r => { const e = r.map(Math.exp), s = e.reduce((a, b) => a + b, 0); return e.map(v => v / s); });
-  const OT = mm(AT, VT);
+  const Q = mm(X, WQ), K = mm(X, WK), V = mm(X, WV);
+  const SC = Q.map(q => K.map(k => q[0] * k[0] + q[1] * k[1]));
+  const SS2 = SC.map(r => r.map(v => v / Math.SQRT2));
+  const AT = SS2.map(r => { const e = r.map(Math.exp), s = e.reduce((a, b) => a + b, 0); return e.map(v => v / s); });
+  const OUTA = mm(AT, V);
   S_.push({
-    id: 'x_attn', chapter: 9, title: 'Self-attention from scratch', code: 'toy: 4 frames × 2 numbers',
+    id: 'attn', chapter: 9, title: 'Self-attention from scratch',
     beats: [
-      "Now the heart of the model: self-attention. Let's build it with a toy example: four frames, each described by just two numbers.",
-      "Every frame makes three vectors, using three different linear layers. A query: what am I looking for? A key: what do I contain? And a value: what will I pass along if someone attends to me?",
-      "The dot product of frame one's query with frame three's key says how well they match: multiply matching entries and add. Do that for every pair, and you get a four by four grid of scores. Row i says how much frame i likes every other frame.",
-      "Divide the scores by the square root of the vector size, so they don't grow too large. Here that's the square root of two. X L S R's heads have sixty-four numbers each, so there it's the square root of sixty-four: eight. Then a softmax turns every row into positive weights that add up to one.",
-      "Finally, each frame's output is the weighted average of all the value vectors, using its row of weights. That's attention: a data-dependent average, where each frame decides for itself where to look.",
+      "Now the heart of the model: self-attention. Let's build it with a tiny example. Four frames, each described by just two numbers.",
+      "Each frame asks a question: which other frames are relevant to me? To do that, each frame produces three vectors, using three different linear layers. A query: what am I looking for? A key: what do I contain? And a value: what will I pass along, if someone attends to me?",
+      "To see how much frame one should attend to frame three, take the dot product of frame one's query with frame three's key. Multiply matching entries, and add. [+1.5] A large dot product means a good match.",
+      "Do that for every pair of frames, and you get a grid of scores. Four frames give a four by four grid. [+1.5] Row i holds how much frame i likes every other frame.",
+      "The scores are divided by the square root of the vector size. This stops them growing too large when vectors get long. For X L S R's attention heads, that's the square root of sixty-four, which is eight.",
+      "Then each row passes through a softmax: exponentiate every score, and divide by the row's sum. Now every row is a set of positive weights that add up to one.",
+      "Finally, each frame's output is the weighted average of all the value vectors, using its row of weights. Frames with a high weight contribute more. That's it. That's attention: a data-dependent weighted average, where each frame decides for itself where to look.",
     ],
-    hud: S => ({ stage: 5, label: 'toy example', shape: ['({T:4}, {C:2})', '({T:4}, {C:2})  ×3', '({T:4}, {T:4})', '({T:4}, {T:4})', '({T:4}, {C:2})'][S.b] }),
+    hud: { stage: 5, shape: '({T:4}, {C:2})  toy', label: 'toy example' },
     draw(ctx, S) {
-      const cs = 82, ch = 54, y0 = 250;
-      const card = (x, y, w, h, title, col, a) => { X.card(ctx, x, y, w, h, a); txt(ctx, title, x + w / 2, y + 40, { size: 26, weight: 800, align: 'center', color: col, alpha: a }); };
-      // X
-      const ax = S.p(0, 0.6, 1);
-      card(110, y0, 240, 340, 'X  frames', COL.T, ax);
-      numMat(ctx, 148, y0 + 70, XT, cs, ch, { size: 22, d: 1, alpha: ax });
-      // Q, K, V
-      [['Q  query', QT, COL.A], ['K  key', KT, COL.K], ['V  value', VT, COL.H]].forEach(([t, M, col], i) => {
-        const a = S.p(1, 0.6, 1.2 + i * 1.4);
-        card(400 + i * 270, y0, 240, 340, t, col, a);
-        numMat(ctx, 438 + i * 270, y0 + 70, M, cs, ch, { size: 22, d: 2, alpha: a, fill: () => rgba(col, 0.16) });
+      const cw = 96, ch = 58, y0 = 250;
+      const xX = 110, xQ = 410, xK = 640, xV = 870, xS = 1140;
+      const a0 = S.p(0);
+      ctx.save(); ctx.globalAlpha = a0;
+      txt(ctx, 'X', xX + cw, y0 - 40, { size: 30, weight: 800, align: 'center' });
+      numMat(ctx, xX, y0, X, cw, ch, { size: 22, d: 1 });
+      for (let i = 0; i < 4; i++) txt(ctx, 'f' + (i + 1), xX - 16, y0 + i * ch + ch / 2 + 1, { size: 22, weight: 700, align: 'right', base: 'middle', color: COL.T });
+      ctx.restore();
+      // "which other frames are relevant to me?": frame 1 reaches out to the other rows
+      const fan = S.p(1, 0.6, 0.4) * (1 - S.ps(1, 2, 0.5));
+      if (fan > 0) {
+        ctx.save(); ctx.globalAlpha = fan;
+        rrect(ctx, xX - 4, y0 - 4, 2 * cw + 8, ch + 8, 8, null, COL.A, 3);
+        ctx.strokeStyle = COL.A; ctx.lineWidth = 3;
+        for (let i = 1; i < 4; i++) {
+          const k = clamp((S.T(1) - 0.8 - i * 0.4) / 0.6);
+          if (k <= 0) continue;
+          const ya = y0 + ch / 2, yb = y0 + i * ch + ch / 2;
+          ctx.globalAlpha = fan * k;
+          ctx.beginPath(); ctx.moveTo(xX + 2 * cw + 8, ya); ctx.quadraticCurveTo(xX + 2 * cw + 40 + i * 18, (ya + yb) / 2, xX + 2 * cw + 14, yb); ctx.stroke();
+          arrow(ctx, xX + 2 * cw + 24, yb - 4, xX + 2 * cw + 12, yb, { color: COL.A, head: 12 });
+        }
+        ctx.globalAlpha = fan;
+        txt(ctx, 'frame 1 asks: which frames matter to me?', xX, y0 + 4 * ch + 60, { size: 24, weight: 700, color: COL.A });
+        ctx.restore();
+      }
+      const a1 = S.ps(1, 1);
+      const trio = [[xQ, Q, 'Q  (query)', COL.A, 'W_Q'], [xK, K, 'K  (key)', COL.K, 'W_K'], [xV, V, 'V  (value)', COL.D, 'W_V']];
+      // "three different linear layers": three empty slots, fed from X, that fill in one by one
+      trio.forEach(([x, M, name, col, wn], i) => {
+        const pa = S.ps(1, 1, 0.6, 1.2 + i * 0.6) * (1 - S.ps(1, 2 + i, 0.4));
+        if (pa <= 0) return;
+        ctx.save(); ctx.globalAlpha = pa;
+        ctx.setLineDash([10, 8]); rrect(ctx, x, y0, 2 * cw, 4 * ch, 10, rgba(col, 0.06), col, 2); ctx.setLineDash([]);
+        mtxt(ctx, 'X · ' + wn, x + cw, y0 + 2 * ch - 6, { size: 26, mono: true, weight: 700, align: 'center', color: col });
+        txt(ctx, 'learned 2 × 2', x + cw, y0 + 2 * ch + 30, { size: 20, align: 'center', color: COL.dim });
+        ctx.strokeStyle = rgba(col, 0.8); ctx.lineWidth = 2.5;
+        const xa = xX + cw, xb = x + cw;
+        ctx.beginPath(); ctx.moveTo(xa, y0 - 72); ctx.quadraticCurveTo((xa + xb) / 2, y0 - 120 - i * 14, xb, y0 - 72); ctx.stroke();
+        arrow(ctx, xb - 8, y0 - 84, xb, y0 - 70, { color: col, head: 12 });
+        ctx.restore();
       });
-      // scores 4 x 4 then weights
-      const sa = S.p(2, 0.7, 2.6), wa = easeIO((S.T(3) - 5) / 1.0);
-      if (sa > 0) {
-        card(1220, y0, 430, 340, wa > 0.5 ? 'softmax weights' : 'scores Q·Kᵀ', wa > 0.5 ? COL.B : COL.C, sa);
-        const M = SC.map((r, i) => r.map((v, j) => lerp(v * Math.SQRT2 / (S.b >= 3 && S.T(3) > 2 ? Math.SQRT2 : 1), AT[i][j], wa)));
-        numMat(ctx, 1252, y0 + 70, M, 92, ch, { size: 22, d: 2, alpha: sa, cellAlpha: (r, c) => clamp((S.T(2) - 3 - r * 0.5) / 0.4) + (S.b > 2 ? 1 : 0),
-          fill: (r, c, v) => wa > 0.5 ? scol(v * 1.4, 0.75) : vcol(v * 0.5, 0.4), hl: (r, c) => S.b === 2 && r === 0 && c === 2 });
+      trio.forEach(([x, M, name, col], i) => {
+        const a = S.ps(1, 2 + i);   // Q, K, V each appear on their own sentence
+        if (a <= 0) return;
+        ctx.save(); ctx.globalAlpha = a;
+        txt(ctx, name, x + cw, y0 - 40, { size: 26, weight: 800, align: 'center', color: col });
+        const hl = (r, c) => (S.b === 2 && ((i === 0 && r === 0) || (i === 1 && r === 2)));
+        numMat(ctx, x, y0, M, cw, ch, { size: 20, hl, hlColor: col });
+        ctx.restore();
+      });
+      if (a1 > 0) txt(ctx, 'Q = X·W_Q    K = X·W_K    V = X·W_V', 1060, y0 + 4 * ch + 60, { size: 26, mono: true, align: 'center', color: COL.dim, alpha: S.ps(1, 1, 0.6, 2) * (1 - S.p(2, 0.4)) });
+      // dot product
+      const d = S.vis(2, 3);
+      if (d > 0) {
+        const q = Q[0], k = K[2];
+        mtxt(ctx, `q₁ · k₃  =  (${fmt(q[0])})(${fmt(k[0])}) + (${fmt(q[1])})(${fmt(k[1])})  =  {K:${fmt(SC[0][2])}}`, 960, y0 + 4 * ch + 70, { size: 32, mono: true, align: 'center', alpha: d });
       }
-      // the q1 · k3 example
-      const ex = S.p(2, 0.6, 0.5) * (1 - S.p(3, 0.4, 0));
-      if (ex > 0) mtxt(ctx, `q₁ · k₃ = ${fmt(QT[0][0], 2)}·${fmt(KT[2][0], 2)} + ${fmt(QT[0][1], 2)}·${fmt(KT[2][1], 2)} = {C:${fmt(QT[0][0] * KT[2][0] + QT[0][1] * KT[2][1], 2)}}`, 960, 680, { size: 32, mono: true, align: 'center', alpha: ex });
-      const sc = S.p(3, 0.6, 0.5) * (1 - S.p(4, 0.4, 0));
-      if (sc > 0) {
-        mtxt(ctx, 'scale: ÷ √d   ·   toy d = 2  →  ÷ 1.41   ·   XLS-R head d = {H:64}  →  ÷ {H:8}', 960, 680, { size: 30, mono: true, align: 'center', alpha: sc });
-        mtxt(ctx, 'softmax(row) = eˢ / Σ eˢ   →   every row sums to 1', 960, 740, { size: 28, mono: true, align: 'center', color: COL.dim, alpha: S.p(3, 0.6, 5) });
-      }
-      // output and attention arcs over four frame tokens
-      const oa = S.p(4, 0.7, 0.5);
-      if (oa > 0) {
-        const tx = [560, 820, 1080, 1340], ty = 820;
-        AT[0].forEach((w, j) => {
-          if (j === 0) return;
-          const k = clamp((S.T(4) - 1 - j * 0.3) / 0.5) * oa;
-          ctx.save(); ctx.globalAlpha *= k; ctx.strokeStyle = COL.B; ctx.lineWidth = 2 + 16 * w;
-          ctx.beginPath(); ctx.moveTo(tx[0], ty - 30); ctx.quadraticCurveTo((tx[0] + tx[j]) / 2, ty - 110 - j * 30, tx[j], ty - 30); ctx.stroke(); ctx.restore();
-          txt(ctx, fmt(w, 2), (tx[0] + tx[j]) / 2, ty - 80 - j * 30, { size: 22, mono: true, weight: 700, align: 'center', color: COL.B, alpha: k });
+      // score grid
+      const sgA = S.p(2, 0.6, 5);
+      if (sgA > 0) {
+        const fillN = S.b >= 4 ? 16 : S.b === 3 ? Math.floor(S.l(3, 3.5, 0.5) * 16) : 1;
+        const scaled = easeIO(S.l(4, 1, 2.5));
+        const soft = easeIO(S.l(5, 1.2, 3));
+        const M = SC.map((r, i) => r.map((v, j) => {
+          const sv = lerp(v, v / Math.SQRT2, scaled);
+          return lerp(sv, AT[i][j], soft);
+        }));
+        ctx.save(); ctx.globalAlpha = sgA;
+        const title = soft > 0.5 ? 'attention weights' : scaled > 0.5 ? 'scores ÷ √d' : 'scores  Q·Kᵀ';
+        txt(ctx, title, xS + 2 * cw, y0 - 40, { size: 26, weight: 800, align: 'center', color: soft > 0.5 ? COL.H : COL.text });
+        numMat(ctx, xS, y0, M, cw, ch, {
+          size: 20, cellAlpha: (r, c) => (r * 4 + c < fillN || (r === 0 && c === 2)) ? 1 : 0.15,
+          fill: (r, c, v) => soft > 0.5 ? scol(v, 0.9) : vcol(v * 0.35, 0.45),
+          color: soft > 0.5 ? '#0a0e16' : COL.text,
+          hl: (r, c) => S.b === 2 && r === 0 && c === 2,
         });
-        tx.forEach((x, j) => { chip(ctx, x, ty, `frame ${j + 1}`, { size: 24, align: 'center', color: j ? COL.text : COL.B, stroke: j ? COL.line : COL.B, alpha: oa }); });
-        mtxt(ctx, `out₁ = Σ w₁ⱼ vⱼ = ( {B:${fmt(OT[0][0], 2)}}, {B:${fmt(OT[0][1], 2)}} )`, 960, 930, { size: 30, mono: true, align: 'center', alpha: S.p(4, 0.6, 3) });
+        for (let j = 0; j < 4; j++) txt(ctx, 'f' + (j + 1), xS + j * cw + cw / 2, y0 + 4 * ch + 28, { size: 20, weight: 700, align: 'center', color: COL.T });
+        for (let i = 0; i < 4; i++) txt(ctx, 'f' + (i + 1), xS - 14, y0 + i * ch + ch / 2 + 1, { size: 20, weight: 700, align: 'right', base: 'middle', color: COL.T });
+        if (soft > 0.5) for (let i = 0; i < 4; i++) txt(ctx, 'Σ=1', xS + 4 * cw + 10, y0 + i * ch + ch / 2 + 1, { size: 20, mono: true, base: 'middle', color: COL.H, alpha: soft });
+        ctx.restore();
+      }
+      // explanations under
+      const e3 = S.vis(3, 4);
+      if (e3 > 0) txt(ctx, 'row i = how much frame i "likes" each frame', 960, y0 + 4 * ch + 70, { size: 30, align: 'center', alpha: e3, weight: 600 });
+      const e4 = S.vis(4, 5);
+      if (e4 > 0) {
+        mtxt(ctx, 'score / √d      toy: d = 2 → ÷ 1.41      XLS-R heads: d = {D:64} → ÷ {D:8}', 960, y0 + 4 * ch + 70, { size: 30, align: 'center', alpha: e4, weight: 600 });
+      }
+      const e5 = S.vis(5, 6);
+      if (e5 > 0) {
+        mtxt(ctx, 'softmax(z)ⱼ  =  exp(zⱼ) / Σₖ exp(zₖ)', 960, y0 + 4 * ch + 70, { size: 32, mono: true, align: 'center', alpha: e5 });
+        const z = [2.0, 1.0, 0.1], e = z.map(Math.exp), s = e.reduce((a, b) => a + b, 0);
+        mtxt(ctx, `e.g. [2.0, 1.0, 0.1]  →  [${e.map(v => (v / s).toFixed(2)).join(', ')}]`, 960, y0 + 4 * ch + 130, { size: 28, mono: true, align: 'center', alpha: e5 * S.p(5, 0.6, 5), color: COL.dim });
+      }
+      // output
+      const o = S.p(6, 0.8);
+      if (o > 0) {
+        ctx.save(); ctx.globalAlpha = o;
+        const a = AT[0];
+        const yy = y0 + 4 * ch + 70;
+        mtxt(ctx, `out₁ = ${a.map((w, j) => `{H:${w.toFixed(2)}}·v${j + 1}`).join(' + ')}  =  [${fmt(OUTA[0][0])}, ${fmt(OUTA[0][1])}]`, 740, yy, { size: 28, mono: true, align: 'center' });
+        // bars for weights
+        a.forEach((w, j) => {
+          const x = 330 + j * 230;
+          rrect(ctx, x, yy + 40, 180, 30, 6, COL.panel, COL.line, 1);
+          rrect(ctx, x, yy + 40, 180 * w, 30, 6, rgba(COL.H, 0.8), null);
+          txt(ctx, 'v' + (j + 1), x + 90, yy + 100, { size: 20, align: 'center', color: COL.D, weight: 700 });
+        });
+        const oa = S.p(6, 0.6, 5);
+        ctx.globalAlpha = o * oa;
+        txt(ctx, 'output', xS + 5 * cw + 50 + 90, y0 - 40, { size: 26, weight: 800, align: 'center', color: COL.B });
+        numMat(ctx, xS + 5 * cw + 50, y0, OUTA, 90, ch, { size: 18 });
+        txt(ctx, 'attention = data-dependent weighted average', W / 2, 890, { size: 34, weight: 700, align: 'center', color: COL.A, alpha: S.p(6, 0.6, 11) });
+        ctx.restore();
       }
     },
   });
 
-  // ------------------------------------------------------------------ 10 multi-head attention with real shapes
+  // ------------------------------------------------------------------ 10 multi-head attention
   S_.push({
-    id: 'x_mha', chapter: 10, title: 'Sixteen heads, real shapes', code: 'encoder.layers[i].attention',
+    id: 'mha', chapter: 10, title: 'Multi-head attention with real shapes',
+    code: 'encoder.layers[i].attention',
     beats: [
-      "Now with real shapes. Three linear layers, each one thousand and twenty-four to one thousand and twenty-four, turn B by two hundred and one by one thousand and twenty-four into queries, keys and values of that same shape.",
-      "X L S R uses sixteen heads. Split the one thousand and twenty-four features into sixteen chunks of sixty-four: B, by two hundred and one, by sixteen, by sixty-four. Then swap the time and head axes: B, by sixteen, by two hundred and one, by sixty-four. Each head is now its own small attention problem.",
-      "Queries times keys transposed gives a two hundred and one by two hundred and one score matrix for every head: B, by sixteen, by two hundred and one, by two hundred and one. That's forty thousand four hundred and one scores per head, more than six hundred and forty thousand per layer, for a single clip.",
-      "Divide by eight, softmax along the last axis, and multiply by the values: back to B, by sixteen, by two hundred and one, by sixty-four. Swap the axes back, merge sixteen times sixty-four into one thousand and twenty-four, and an output projection mixes the heads together.",
-      "Why sixteen heads? Each can learn its own notion of relevance: one tracks neighbouring frames, another links frames that sound alike, another gathers a summary of the whole clip. And the score matrix grows with the square of the number of frames: double the clip, and attention costs four times as much.",
+      "Now let's do it with the real shapes. The input is B by forty-nine by ten twenty-four.",
+      "Three linear layers, each ten twenty-four to ten twenty-four, produce the queries, keys and values. Each one is B by forty-nine by ten twenty-four.",
+      "Instead of one big attention, X L S R uses sixteen heads. We split the one thousand and twenty-four features into sixteen chunks of sixty-four. That's a reshape: B by forty-nine by sixteen by sixty-four.",
+      "Then we swap the time and head axes, giving B by sixteen by forty-nine by sixty-four. Now each head is its own little attention problem: forty-nine frames, sixty-four numbers each.",
+      "Queries times keys transposed: forty-nine by sixty-four, times sixty-four by forty-nine, gives a forty-nine by forty-nine score matrix, for each head. The scores tensor is B by sixteen by forty-nine by forty-nine. Divide by eight, and softmax along the last axis.",
+      "Multiply the attention weights, forty-nine by forty-nine, by the values, forty-nine by sixty-four, and we're back to forty-nine by sixty-four per head. The tensor is B by sixteen by forty-nine by sixty-four.",
+      "Now undo the split. Swap the axes back, and merge sixteen times sixty-four into one thousand and twenty-four. A final linear layer, the output projection, mixes information across heads. We're back to B by forty-nine by ten twenty-four.",
+      "Why multiple heads? Each head can learn its own notion of relevance. One might track neighbouring frames. Another might link frames that sound similar. Another might gather a summary of the whole clip. And each head only costs a sixty-four dimensional slice.",
+      "Note the cost: the score matrix grows with the square of the number of frames. One second gives forty-nine squared, about twenty-four hundred scores per head. A four-second detector crop gives two hundred and one frames, and over forty thousand scores per head, for each of the sixteen heads.",
     ],
-    hud: S => ({ stage: 5, shape: [RES, S.T(1) > 6 ? '({B:B}, {H:16}, {T:201}, {C:64})' : '({B:B}, {T:201}, {H:16}, {C:64})', '({B:B}, {H:16}, {T:201}, {T:201})', S.T(3) > 5 ? RES : '({B:B}, {H:16}, {T:201}, {C:64})', '({B:B}, {H:16}, {T:201}, {T:201})'][S.b] }),
+    hud: S => {
+      const X = '({B:B}, {T:49}, {C:1024})', SPLIT = '({B:B}, {T:49}, {H:16}, {D:64})', HEADS = '({B:B}, {H:16}, {T:49}, {D:64})', SC = '({B:B}, {H:16}, {T:49}, {T:49})';
+      // [shape before, shape after, sentence that states the new shape]: the capsule changes when the voice says it
+      const R = [[X, X, 0], [X, X, 0], [X, SPLIT, 2], [SPLIT, HEADS, 0], [HEADS, SC, 1], [SC, HEADS, 1], [HEADS, X, 1], [SC, SC, 0], [SC, SC, 0]][S.b];
+      return { stage: 5, shape: S.T(S.b) >= S.st(S.b, R[2]) ? R[1] : R[0] };
+    },
     draw(ctx, S) {
-      const cam = X.world(ctx, S, [
-        [0, -1, { yaw: 0.35, pitch: 0.22, dist: 2100, tx: 0, ty: 30, tz: 0, cx: 960, cy: 520 }], [1, 0, { yaw: 0.62, pitch: 0.26, dist: 1450, tx: 120, tz: -300 }],
-        [2, 0, { yaw: 0.5, pitch: 0.3, dist: 1700, tx: 200, tz: -330 }], [3, 0, { yaw: 0.3, pitch: 0.2, dist: 1600, tx: 80, tz: -250 }], [4, 0, { yaw: 0.05, pitch: 0.12, dist: 2000, tx: 0, tz: 0 }],
-      ], { floorY: -330 });
-      const s1 = S.p(1, 0.6, 0), s4 = S.p(4, 0.6, 0);
-      // X -> Q, K, V
-      const qkv = 1 - S.p(2, 0.6, 0);
-      if (qkv > 0 && s4 < 1) {
-        S3.block(ctx, cam, { x: -700, y: 0, z: 0, w: 230, h: 300, d: 60, cells: [12, 9, 2], seed: 161, alpha: S.p(0, 0.6, 0) * qkv * (1 - s1), color: THEME.a, tags: { w: ['T', 201], h: ['C', 1024], d: ['B', 'B'] } });
-        [['Q', COL.A, 260], ['K', COL.K, 0], ['V', COL.H, -260]].forEach(([l, col, z], i) => {
-          const a = S.p(0, 0.6, 2 + i * 1.2) * qkv * (i === 0 ? 1 : 1 - s1);
-          S3.path3(ctx, cam, [[-580, 0, 0], [-120, 0, z]], { color: col, lw: 2, p: S.l(0, 0.8, 2 + i * 1.2), alpha: a * 0.7 });
-          if (i > 0 || s1 < 0.5) S3.block(ctx, cam, { x: 0, y: 0, z, w: 230, h: 300, d: 40, cells: [12, 9, 2], seed: 162 + i, alpha: a, color: col, fn: (r, c, f) => rgba(col, 0.18 + 0.55 * (noise(r + f, c, 162 + i) * 0.5 + 0.5)) });
-          S3.caption(ctx, cam, 0, 190, z, l, { size: 34, mono: false, weight: 800, color: col, alpha: a });
+      const s = 0.5, fh = 4; // px per feature, px per frame
+      const bw = 768 * s, bh = 49 * fh;
+      // beats 0-1: X -> Q K V
+      const A = S.vis(0, 2);
+      if (A > 0) {
+        ctx.save(); ctx.globalAlpha = A;
+        mat(ctx, 160, 420, bw, bh, { rows: 14, cols: 28, seed: 101, left: ['{T:49}', COL.T], top: ['{C:1024}', COL.C], title: 'X' });
+        const qkv = [['Q', COL.A, 170], ['K', COL.K, 430], ['V', COL.D, 690]];
+        qkv.forEach(([n, col, y], i) => {
+          const a = S.p(1, 0.6, 1 + i * 0.8);
+          if (a <= 0) return;
+          ctx.globalAlpha = A * a;
+          const ey = y + bh * 0.4;
+          arrow(ctx, 160 + bw + 30, 518, 900, ey, { color: col, lw: 3 });
+          chip(ctx, 740, lerp(518, ey, 0.55), `W_${n}  1024×1024`, { size: 20, mono: true, color: col, align: 'center', fill: COL.bg, stroke: rgba(col, 0.6) });
+          mat(ctx, 1000, y, bw, bh * 0.8, { rows: 11, cols: 28, seed: 110 + i, stroke: col, left: ['{T:49}', COL.T] });
+          txt(ctx, n, 1000 + bw + 30, ey + 16, { size: 44, weight: 800, color: col });
+          mtxt(ctx, '({B:B}, {T:49}, {C:1024})', 1460, ey + 12, { size: 28, mono: true });
         });
-        S3.caption(ctx, cam, -360, -230, 0, 'Linear 1024 → 1024  ×3', { size: 24, mono: false, weight: 700, color: COL.dim, alpha: S.p(0, 0.6, 3) * qkv * (1 - s1) });
+        ctx.restore();
       }
-      // 16 heads: a deck of thin slabs (T x 64)
-      const deck = s1 * (1 - S.p(4, 0.6, 0));
-      const spread = easeIO((S.T(1) - 1.5) / 1.4) + (S.b > 1 ? 1 : 0);
-      const scores = S.p(2, 0.8, 0.6) * (1 - easeIO((S.T(3) - 1.5) / 1.2) * (S.b === 3 ? 1 : 0)) * (S.b <= 3 ? 1 : 0);
-      const merge = S.b === 3 ? easeIO((S.T(3) - 5) / 1.2) : 0;
-      if (deck > 0) {
-        for (let h = 15; h >= 0; h--) {
-          const fan = clamp(spread) * (1 - merge), y = (7.5 - h) * 18.75 * (1 - fan), z = -h * 46 * fan;
-          const sq = scores > 0.01 && S.b === 2;
-          S3.block(ctx, cam, { x: sq ? 60 : 0, y, z, w: sq ? 300 : 230, h: sq ? 300 : lerp(18.75, 70, fan), d: 8, cells: sq ? [10, 10, 1] : [3, 9, 1], seed: 170 + h, alpha: deck * (h === 0 ? 1 : 0.85),
-            color: E.mix(THEME.a, THEME.b, h / 15),
-            fn: sq ? ((r, c) => scol(Math.exp(-((r - c) ** 2) / (h % 4 === 0 ? 2 : 9)) * 0.9 + 0.1 * (noise(r, c, h) * 0.5 + 0.5), 0.95)) : null,
-            tags: h === 0 ? (sq ? { w: ['T', 201], h: ['T', 201] } : { w: ['T', 201], h: ['C', 64] }) : null });
+      // beat 2: split Q into 12 slices
+      const Bv = S.vis(2, 3);
+      if (Bv > 0) {
+        ctx.save(); ctx.globalAlpha = Bv;
+        const x0 = 380, y0 = 330, w = 1152, h = 300, sw = w / 16;
+        const sp = easeIO(S.l(2, 1.5, 2.5));
+        for (let hd = 0; hd < 16; hd++) {
+          const x = x0 + hd * (sw + 10 * sp) - 75 * sp;
+          mat(ctx, x, y0, sw, h, { rows: 16, cols: 4, seed: 120 + hd, stroke: sp > 0.5 ? rgba(COL.H, 0.9) : COL.line });
+          if (sp > 0.5) txt(ctx, 'h' + (hd + 1), x + sw / 2, y0 + h + 40, { size: 22, weight: 700, align: 'center', color: COL.H, alpha: sp });
         }
-        S3.caption(ctx, cam, 300, 230, -360, '16 heads', { size: 30, mono: false, weight: 800, color: COL.H, alpha: deck * clamp(spread) * (1 - merge) });
-        if (S.b === 2) {
-          txt(ctx, '201 × 201 = 40,401 scores per head', 1500, 330, { size: 28, weight: 700, align: 'center', color: COL.text, alpha: S.p(2, 0.6, 4) });
-          txt(ctx, '× 16 heads = 646,416 per layer, per clip', 1500, 375, { size: 24, weight: 600, align: 'center', color: COL.dim, alpha: S.p(2, 0.6, 6) });
-        }
-        if (S.b === 3) {
-          mtxt(ctx, 'softmax( Q·Kᵀ / {H:8} ) · V  →  ({B:B}, {H:16}, {T:201}, {C:64})', 960, 860, { size: 28, mono: true, align: 'center', alpha: S.p(3, 0.6, 0.5) * (1 - merge) });
-          mtxt(ctx, 'merge 16 × 64 → 1024, then Linear 1024 → 1024 (out_proj)', 960, 860, { size: 28, mono: true, align: 'center', alpha: merge });
-        }
+        dimLeft(ctx, x0 - 70 * sp - 6, y0, h, '{T:49}', COL.T, 26);
+        ctx.globalAlpha = Bv * (1 - sp);
+        dimTop(ctx, x0, y0 - 6, w, '{C:1024}', COL.C, 26);
+        ctx.globalAlpha = Bv * sp;
+        dimTop(ctx, x0 - 75, y0 - 6, sw, '{D:64}', COL.D, 24);
+        txt(ctx, 'Q', 150, y0 + h / 2, { size: 48, weight: 800, color: COL.A, base: 'middle' });
+        ctx.globalAlpha = Bv;
+        mtxt(ctx, '{C:1024}  =  {H:16} heads × {D:64}', W / 2, 770, { size: 38, mono: true, align: 'center', alpha: S.p(2, 0.6, 3) });
+        mtxt(ctx, 'q.view(B, {T:49}, {H:16}, {D:64})', W / 2, 840, { size: 30, mono: true, align: 'center', color: COL.dim, alpha: S.p(2, 0.6, 6) });
+        ctx.restore();
       }
-      // what heads learn + the quadratic cost
-      if (s4 > 0) {
-        const pats = [['neighbours', (r, c) => Math.exp(-((r - c) ** 2) / 1.5)], ['similar sounds', (r, c) => ((Math.floor(r / 3) + Math.floor(c / 3)) % 2 === 0 ? 0.7 : 0.05) * (0.6 + 0.4 * (noise(r, c, 5) * 0.5 + 0.5))], ['clip summary', (r, c) => c === 3 || c === 8 ? 0.9 : 0.08]];
-        pats.forEach(([lab, f], i) => {
-          const k = S.p(4, 0.6, 1 + i * 1.6);
-          S3.block(ctx, cam, { x: -520 + i * 420, y: 60, z: 0, w: 260, h: 260, d: 10, cells: [12, 12, 1], alpha: k * s4, color: E.mix(THEME.a, THEME.b, i / 2), fn: (r, c) => scol(f(r, c), 0.95) });
-          S3.caption(ctx, cam, -520 + i * 420, -120, 0, lab, { size: 26, mono: false, weight: 700, alpha: k * s4 });
+      // beat 3: stack of heads
+      const Cv = S.vis(3, 4);
+      if (Cv > 0) {
+        ctx.save(); ctx.globalAlpha = Cv;
+        const cw = 128, chh = 196;
+        const t = easeIO(S.l(3, 1.6, 0.5));
+        for (let hd = 15; hd >= 0; hd--) {
+          const sx = 380 + hd * 72 - 75, sy = 330;
+          const tx = 700 + hd * 16, ty = 390 - hd * 13;
+          ctx.save(); ctx.globalAlpha = Cv;
+          mat(ctx, lerp(sx, tx, t), lerp(sy, ty, t), lerp(72, cw, t), lerp(300, chh, t), { rows: 12, cols: 5, seed: 120 + hd, stroke: rgba(COL.H, 0.9) });
+          ctx.restore();
+        }
+        ctx.globalAlpha = Cv * t;
+        dimLeft(ctx, 694, 390, chh, '{T:49}', COL.T, 26);
+        dimBottom(ctx, 700, 390 + chh + 6, cw, '{D:64}', COL.D, 24);
+        txt(ctx, '16 heads', 700 + 15 * 16 + cw + 30, 390 - 15 * 13 + 20, { size: 28, weight: 700, color: COL.H });
+        mtxt(ctx, '.transpose(1, 2):  ({B:B}, {T:49}, {H:16}, {D:64})  →  ({B:B}, {H:16}, {T:49}, {D:64})', W / 2, 770, { size: 32, mono: true, align: 'center' });
+        txt(ctx, 'each head = its own attention problem: 49 frames × 64 numbers', W / 2, 840, { size: 28, align: 'center', color: COL.dim, alpha: S.p(3, 0.6, 6) });
+        ctx.restore();
+      }
+      // beat 4: scores per head
+      const Dv = S.vis(4, 5);
+      if (Dv > 0) {
+        ctx.save(); ctx.globalAlpha = Dv;
+        const y0 = 280;
+        mat(ctx, 160, y0, 128, 196, { rows: 12, cols: 5, seed: 130, stroke: COL.A, left: ['{T:49}', COL.T], bottom: ['{D:64}', COL.D], title: 'Q_h', titleColor: COL.A });
+        txt(ctx, '×', 360, y0 + 98, { size: 50, align: 'center', base: 'middle', color: COL.dim });
+        mat(ctx, 440, y0 + 34, 196, 128, { rows: 5, cols: 12, seed: 131, stroke: COL.K, left: ['{D:64}', COL.D], bottom: ['{T:49}', COL.T], title: 'K_hᵀ', titleColor: COL.K });
+        txt(ctx, '=', 700, y0 + 98, { size: 50, align: 'center', base: 'middle', color: COL.dim });
+        const sa = S.p(4, 0.6, 3);
+        ctx.globalAlpha = Dv * sa;
+        for (let hd = 5; hd >= 1; hd--) { rrect(ctx, 800 + hd * 16, y0 - hd * 16, 196, 196, 6, COL.bg2, rgba(COL.H, 0.5), 2); }
+        heat(ctx, 800, y0, 196, 49, PAT.mixed);
+        dimLeft(ctx, 794, y0, 196, '{T:49}', COL.T, 24);
+        dimBottom(ctx, 800, y0 + 202, 196, '{T:49}', COL.T, 24);
+        txt(ctx, 'S_h', 900, y0 - 110, { size: 28, weight: 800, align: 'center' });
+        txt(ctx, '× 16 heads', 1010, y0 - 70, { size: 22, weight: 700, color: COL.H });
+        ctx.globalAlpha = Dv;
+        const fa = S.p(4, 0.6, 8);
+        mtxt(ctx, '({T:49}×{D:64}) · ({D:64}×{T:49}) = ({T:49}×{T:49}) per head', 1150, y0 + 40, { size: 24, mono: true, alpha: fa });
+        mtxt(ctx, 'scores: ({B:B}, {H:16}, {T:49}, {T:49})', 1150, y0 + 100, { size: 30, mono: true, alpha: fa, weight: 600 });
+        const sm = S.p(4, 0.6, 13);
+        mtxt(ctx, '÷ √{D:64} = 8,  then softmax over the last axis', 1150, y0 + 170, { size: 28, alpha: sm });
+        if (sm > 0) { ctx.globalAlpha = Dv * sm; arrow(ctx, 800, y0 + 60, 1000, y0 + 60, { color: COL.K, lw: 3 }); txt(ctx, 'each row sums to 1', 900, y0 + 330, { size: 22, color: COL.K, align: 'center', weight: 700 }); }
+        ctx.restore();
+      }
+      // beat 5: A V
+      const Ev = S.vis(5, 6);
+      if (Ev > 0) {
+        ctx.save(); ctx.globalAlpha = Ev;
+        const y0 = 280;
+        heat(ctx, 160, y0, 196, 49, PAT.mixed);
+        dimLeft(ctx, 154, y0, 196, '{T:49}', COL.T, 24);
+        dimBottom(ctx, 160, y0 + 202, 196, '{T:49}', COL.T, 24);
+        txt(ctx, 'A_h', 258, y0 - 30, { size: 28, weight: 800, align: 'center', color: COL.H });
+        txt(ctx, '×', 420, y0 + 98, { size: 50, align: 'center', base: 'middle', color: COL.dim });
+        mat(ctx, 490, y0, 128, 196, { rows: 12, cols: 5, seed: 140, stroke: COL.D, bottom: ['{D:64}', COL.D], title: 'V_h', titleColor: COL.D });
+        txt(ctx, '=', 680, y0 + 98, { size: 50, align: 'center', base: 'middle', color: COL.dim });
+        const oa = S.p(5, 0.6, 4);
+        ctx.globalAlpha = Ev * oa;
+        for (let hd = 5; hd >= 1; hd--) rrect(ctx, 760 + hd * 16, y0 - hd * 16, 128, 196, 6, COL.bg2, rgba(COL.H, 0.5), 2);
+        mat(ctx, 760, y0, 128, 196, { rows: 12, cols: 5, seed: 141, stroke: COL.B, bottom: ['{D:64}', COL.D], title: 'O_h', titleColor: COL.B });
+        ctx.globalAlpha = Ev;
+        mtxt(ctx, '({T:49}×{T:49}) · ({T:49}×{D:64}) = ({T:49}×{D:64}) per head', 1100, y0 + 60, { size: 24, mono: true, alpha: S.p(5, 0.6, 3) });
+        mtxt(ctx, '({B:B}, {H:16}, {T:49}, {D:64})', 1100, y0 + 130, { size: 32, mono: true, alpha: S.p(5, 0.6, 7), weight: 600 });
+        txt(ctx, 'row t of O_h = weighted average of value rows', 1100, y0 + 190, { size: 24, color: COL.dim, alpha: S.p(5, 0.6, 9) });
+        ctx.restore();
+      }
+      // beat 6: merge + output projection
+      const Fv = S.vis(6, 7);
+      if (Fv > 0) {
+        ctx.save(); ctx.globalAlpha = Fv;
+        const t = easeIO(S.l(6, 1.6, 1.5));
+        const x0 = 200, y0 = 300, sw = 24, h = 196;
+        for (let hd = 0; hd < 16; hd++) {
+          const x = lerp(x0 + hd * 46, x0 + hd * sw, t);
+          mat(ctx, x, y0, sw, h, { rows: 12, cols: 2, seed: 150 + hd, stroke: rgba(COL.H, 1 - t * 0.7), gap: 1 });
+        }
+        ctx.globalAlpha = Fv * t;
+        dimTop(ctx, x0, y0 - 6, 16 * sw, '{H:16} × {D:64} = {C:1024}', COL.C, 24);
+        dimLeft(ctx, x0 - 6, y0, h, '{T:49}', COL.T, 24);
+        const pa = S.p(6, 0.6, 7);
+        ctx.globalAlpha = Fv * pa;
+        arrow(ctx, 620, y0 + h / 2, 760, y0 + h / 2, { color: COL.K });
+        box(ctx, 770, y0 + h / 2 - 60, 260, 120, ['W_O', '1024 × 1024'], { size: 34, color: COL.K });
+        arrow(ctx, 1040, y0 + h / 2, 1170, y0 + h / 2, { color: COL.K });
+        mat(ctx, 1250, y0, bw, h, { rows: 14, cols: 28, seed: 160, left: ['{T:49}', COL.T], top: ['{C:1024}', COL.C] });
+        ctx.globalAlpha = Fv;
+        mtxt(ctx, '({B:B}, {H:16}, {T:49}, {D:64})  →  transpose  →  ({B:B}, {T:49}, {H:16}, {D:64})  →  reshape  →  ({B:B}, {T:49}, {C:1024})', W / 2, 700, { size: 26, mono: true, align: 'center', alpha: S.p(6, 0.6, 2) });
+        txt(ctx, 'attention weights: 4 × (1024×1024 + 1024) ≈ 4.2 M per layer', W / 2, 790, { size: 28, align: 'center', color: COL.dim, alpha: S.p(6, 0.6, 8) });
+        ctx.restore();
+      }
+      // beat 7: head diversity
+      const Gv = S.vis(7, 8);
+      if (Gv > 0) {
+        ctx.save(); ctx.globalAlpha = Gv;
+        const hs = [['local', 'neighbouring frames', PAT.local], ['similar', 'frames that sound alike', PAT.similar], ['global', 'a few summary frames', PAT.global]];
+        hs.forEach(([k, d, f], i) => {
+          const a = S.p(7, 0.6, 2.5 + i * 2.5);
+          const x = 170 + i * 560;
+          heat(ctx, x, 230, 400, 49, f, a);
+          txt(ctx, d, x + 200, 690, { size: 28, weight: 700, align: 'center', alpha: a, color: COL.H });
         });
-        const ck = S.p(4, 0.6, 7);
-        if (ck > 0) {
-          X.card(ctx, 520, 760, 880, 170, ck);
-          txt(ctx, 'frames  T', 560, 810, { size: 22, weight: 700, color: COL.T, alpha: ck });
-          txt(ctx, 'scores  T²', 560, 880, { size: 22, weight: 700, color: COL.C, alpha: ck });
-          rrect(ctx, 700, 795, 130, 22, 6, rgba(COL.T, 0.8 * ck), null); rrect(ctx, 700 + 140, 795, 130, 22, 6, rgba(COL.T, 0.4 * ck), null);
-          rrect(ctx, 700, 865, 160, 22, 6, rgba(COL.C, 0.8 * ck), null); rrect(ctx, 700 + 170, 865, 480, 22, 6, rgba(COL.C, 0.4 * ck), null);
-          txt(ctx, '2× frames → 4× scores', 1370, 885, { size: 24, weight: 700, color: COL.C, align: 'right', alpha: ck });
-        }
+        txt(ctx, 'illustrative patterns: each head learns its own "who is relevant to whom"', W / 2, 800, { size: 28, align: 'center', color: COL.dim, alpha: S.p(7, 0.6, 9) });
+        ctx.restore();
+      }
+      // beat 8: quadratic cost
+      const Hv = S.p(8);
+      if (Hv > 0) {
+        ctx.save(); ctx.globalAlpha = Hv;
+        const sc = 1.9;
+        heat(ctx, 300, 780 - 49 * sc, 49 * sc, 49, PAT.local);
+        txt(ctx, '1 s → 49 frames', 300 + 49 * sc / 2, 830, { size: 26, weight: 700, align: 'center' });
+        txt(ctx, '2,401 scores / head', 300 + 49 * sc / 2, 870, { size: 24, align: 'center', color: COL.dim, mono: true });
+        const b = S.p(8, 0.8, 5);
+        ctx.globalAlpha = Hv * b;
+        heat(ctx, 900, 780 - 201 * sc * b, 201 * sc * b, 60, PAT.local);
+        txt(ctx, '4 s → 201 frames', 900 + 201 * sc / 2, 830, { size: 26, weight: 700, align: 'center' });
+        txt(ctx, '40,401 scores / head', 900 + 201 * sc / 2, 870, { size: 24, align: 'center', color: COL.dim, mono: true });
+        mtxt(ctx, 'attention cost ∝ {T:T}²', 1400, 520, { size: 44, weight: 700 });
+        ctx.restore();
       }
     },
   });
@@ -262,10 +784,11 @@
       "Attention is one half of a transformer layer. Here's the complete layer, the way X L S R arranges it, with a layer norm in front of each part. This is called pre-norm.",
       "First: normalize, attend, and add the result back onto the input. That's a residual connection. The stream of frames is never overwritten, only added to.",
       "Second: normalize again, and run a feed-forward network on each frame by itself: a linear layer from one thousand and twenty-four up to four thousand and ninety-six, a GELU, and a linear layer back down to one thousand and twenty-four. Then add the residual again.",
-      "Attention mixes information between frames. The feed-forward network processes each frame on its own. And the output has exactly the input's shape, B by two hundred and one by one thousand and twenty-four, which is what lets us stack layers like bricks.",
+      "Attention mixes information between frames. The feed-forward network processes each frame on its own. And the output has exactly the input's shape, B by forty-nine by one thousand and twenty-four, which is what lets us stack layers like bricks.",
       "Count the weights. Attention has four matrices of one thousand and twenty-four by one thousand and twenty-four: about four point two million. The feed-forward network has two of one thousand and twenty-four by four thousand and ninety-six: about eight point four million. Together, with the two layer norms, about twelve point six million per layer.",
+      "X L S R stacks twenty-four of these layers, one after another: about three hundred and two million weights, ninety-six percent of the whole model. Every layer reads and writes the same stream of frames, so the tensor flows through all twenty-four without ever changing shape.",
     ],
-    hud: S => ({ stage: 5, shape: S.b === 2 && S.T(2) > 3 && S.T(2) < 9 ? '({B:B}, {T:201}, {C:4096})' : RES }),
+    hud: S => ({ stage: 5, shape: S.b === 2 && S.T(2) > 3 && S.T(2) < 9 ? '({B:B}, {T:49}, {C:4096})' : RES }),
     draw(ctx, S) {
       // the residual stream as a vertical rail with blocks hanging off it
       const x0 = 330, top = 200, bot = 900, eqa = 1 - S.p(4, 0.5, 0);
@@ -278,21 +801,30 @@
       glow(ctx, x0, py, 40, THEME.a, 0.7 * ra);
       txt(ctx, 'residual stream', x0, bot + 46, { size: 22, weight: 700, align: 'center', color: COL.dim, alpha: ra });
       mtxt(ctx, RES, x0 + 40, top - 70, { size: 24, mono: true, align: 'left', alpha: ra });
-      const unit = (y, label, col, t0, b) => {
-        const a = S.p(b, 0.6, t0);
+      // the whole layer appears dimmed on "Here's the complete layer"; each part lights up when it is named
+      const s1 = S.st(0, 1), sk = 0.32 * S.p(0, 0.8, s1);
+      const lnCue = s1 + 0.62 * (S.st(0, 2) - s1);           // "...a layer norm in front of each part"
+      const lnPulse = S.b === 0 ? Math.sin(Math.PI * clamp((S.T(0) - lnCue) / 1.6)) : 0;
+      const unit = (y, label, col, t0, b, ln) => {
+        const a = Math.max(sk, S.p(b, 0.6, t0), ln ? 0.85 * S.p(0, 0.5, lnCue) : 0);
         if (a <= 0) return;
-        arrow(ctx, x0, y + 60, x0 + 100, y + 60, { color: col, alpha: a, p: a });
+        arrow(ctx, x0, y + 60, x0 + 100, y + 60, { color: col, alpha: a, p: Math.min(1, a / 0.3) });
+        if (ln && lnPulse > 0) glow(ctx, x0 + 228, y + 60, 150, col, 0.5 * lnPulse);
         box(ctx, x0 + 110, y + 20, 236, 80, label, { size: 26, color: COL.text, stroke: col, alpha: a });
-        return a;
+      };
+      const plus = (y, col, b, t0) => {
+        const a = Math.max(sk, S.p(b, 0.6, t0));
+        if (a <= 0) return;
+        arrow(ctx, x0 + 228, y + 80, x0 + 20, y + 10, { color: col, alpha: a, p: Math.min(1, a / 0.3) });
+        chip(ctx, x0, y, '+', { size: 34, align: 'center', color: COL.text, stroke: col, alpha: a });
       };
       // attention half
-      unit(640, 'LayerNorm', COL.A, 0.5, 1); unit(520, 'Multi-head attn', COL.H, 2, 1);
-      const p1 = S.p(1, 0.6, 4.5);
-      if (p1 > 0) { arrow(ctx, x0 + 228, 540, x0 + 20, 470, { color: COL.H, alpha: p1, p: p1 }); chip(ctx, x0, 460, '+', { size: 34, align: 'center', color: COL.text, stroke: COL.H, alpha: p1 }); }
+      unit(640, 'LayerNorm', COL.A, 0.5, 1, true); unit(520, 'Multi-head attn', COL.H, 2, 1);
+      plus(460, COL.H, 1, 4.5);
       // feed-forward half
-      unit(340, 'LayerNorm', COL.A, 0.5, 2); unit(220, 'Feed-forward', COL.C, 1.5, 2);
-      const p2 = S.p(2, 0.6, 10);
-      if (p2 > 0) { arrow(ctx, x0 + 228, 240, x0 + 20, 170, { color: COL.C, alpha: p2, p: p2 }); chip(ctx, x0, 160, '+', { size: 34, align: 'center', color: COL.text, stroke: COL.C, alpha: p2 }); }
+      unit(340, 'LayerNorm', COL.A, 0.5, 2, true); unit(220, 'Feed-forward', COL.C, 1.5, 2);
+      plus(160, COL.C, 2, 10);
+      txt(ctx, 'pre-norm: LN before each part', 720, 706, { size: 24, weight: 700, color: COL.A, alpha: S.vis(0, 1) * S.ps(0, 2) });
       mtxt(ctx, 'x = x + Attn( LN(x) )', 700, 560, { size: 30, mono: true, alpha: S.p(1, 0.6, 1) * eqa });
       mtxt(ctx, 'x = x + FFN( LN(x) )', 700, 260, { size: 30, mono: true, alpha: S.p(2, 0.6, 1) * eqa });
       // FFN in 3-D: 1024 -> 4096 -> 1024 for every frame
@@ -303,16 +835,16 @@
         blk(-380, 230, 1024, 181, THEME.a, 2.5); blk(0, 420, 4096, 182, COL.C, 4.5); blk(380, 230, 1024, 183, THEME.a, 7);
         S3.caption(ctx, cam, -190, 250, 0, 'Linear ↑', { size: 22, mono: false, weight: 700, color: COL.C, alpha: ff * S.p(2, 0.6, 4.5) });
         S3.caption(ctx, cam, 190, 250, 0, 'GELU · Linear ↓', { size: 22, mono: false, weight: 700, color: COL.C, alpha: ff * S.p(2, 0.6, 7) });
-        S3.caption(ctx, cam, 0, -290, 0, 'each of the 201 frames, independently', { size: 22, mono: false, weight: 700, color: COL.dim, alpha: ff * S.p(2, 0.6, 8) });
+        S3.caption(ctx, cam, 0, -290, 0, 'each of the 49 frames, independently', { size: 22, mono: false, weight: 700, color: COL.dim, alpha: ff * S.p(2, 0.6, 8) });
       }
       const mix = S.p(3, 0.6, 0.5) * (1 - S.p(4, 0.6, 0));
       if (mix > 0) {
         chip(ctx, 1420, 880, 'attention: between frames · FFN: within a frame', { size: 26, align: 'center', color: COL.text, stroke: COL.line, alpha: mix });
       }
       // parameter bars
-      const pb = S.p(4, 0.7, 0.5);
+      const pb = S.p(4, 0.7, 0.5) * (1 - S.p(5, 0.5, 0));
       if (pb > 0) {
-        X.card(ctx, 900, 380, 940, 470, pb);
+        XL.card(ctx, 900, 380, 940, 470, pb);
         const rows = [['attention: Q, K, V, out  4 × (1024² + 1024)', 4198400, COL.H], ['feed-forward: 1024 → 4096 → 1024', 8393728, COL.C], ['2 layer norms', 4096, COL.A]];
         rows.forEach(([lab, v, col], i) => {
           const k = easeOut4((S.T(4) - 1 - i * 2.2) / 0.8);
@@ -324,65 +856,28 @@
         txt(ctx, 'one layer', 940, 830, { size: 26, weight: 700, alpha: S.p(4, 0.6, 8) });
         E.countUp(ctx, 12596224, 0, 1800, 832, S.T(4) - 8, { size: 34, align: 'right', color: THEME.a });
       }
+      // twenty-four layers, stacked like the bricks they are
+      const st = S.p(5, 0.7, 0.3);
+      if (st > 0) {
+        XL.card(ctx, 900, 190, 940, 720, st);
+        txt(ctx, '× 24 layers', 940, 262, { size: 48, weight: 800, color: THEME.a, alpha: st });
+        txt(ctx, '302,309,376 weights · 96 % of the model', 940, 306, { size: 26, weight: 600, color: COL.dim, alpha: S.p(5, 0.6, 2) });
+        // opaque slabs drawn back to front, so each one reads as a separate brick
+        for (let i = 23; i >= 0; i--) {
+          const k = clamp((S.T(5) - 0.6 - (23 - i) * 0.07) / 0.35);
+          if (k <= 0) continue;
+          const x = 960 + i * 12, y = 790 - i * 18, c = E.mix(THEME.a, THEME.b, i / 23);
+          ctx.save(); ctx.globalAlpha *= k;
+          rrect(ctx, x, y, 420, 56, 10, E.mix(COL.panel, c, 0.32), c, 2);
+          ctx.restore();
+          if (i === 0 || i === 11 || i === 23) {
+            line(ctx, x + 424, y + 10, x + 446, y + 10, rgba(c, 0.8 * k), 2);
+            txt(ctx, `layer ${i + 1}`, x + 454, y + 17, { size: 22, weight: 700, color: c, alpha: k });
+          }
+        }
+        mtxt(ctx, 'every layer: ({B:B}, {T:49}, {C:1024}) → ({B:B}, {T:49}, {C:1024})', 1370, 886, { size: 24, mono: true, align: 'center', alpha: S.p(5, 0.6, 4) });
+      }
     },
   });
 
-  // ------------------------------------------------------------------ 12 twenty-four layers deep
-  S_.push({
-    id: 'x_stack', chapter: 12, title: 'Twenty-four layers deep', code: 'model.encoder.layers[0..23]',
-    beats: [
-      "X L S R stacks twenty-four of these layers: about three hundred and two million weights, ninety-six percent of the model. The tensor flows through all of them without ever changing shape.",
-      "After layer twenty-four comes one final layer norm. The result is the last hidden state: B, by two hundred and one, by one thousand and twenty-four. One context vector per twenty milliseconds, each informed by the whole clip.",
-      "You can also ask for every intermediate result. You get twenty-five hidden states: the input to the first layer, and the raw output of each of the twenty-four layers. Stack them, and that's twenty-five, by B, by two hundred and one, by one thousand and twenty-four.",
-      "Different depths hold different information. Lower layers stay close to the acoustics, higher ones become more abstract and linguistic. Layer-by-layer studies of deepfake detection find the lower layers the most useful, which is why many detectors learn a weighted mix of the hidden states instead of reading only the last one.",
-    ],
-    hud: S => ({ stage: S.b >= 1 ? 6 : 5, shape: S.b >= 2 ? '({K:25}, {B:B}, {T:201}, {C:1024})' : RES, label: S.b >= 2 ? 'all hidden states' : null }),
-    draw(ctx, S) {
-      const cam = X.world(ctx, S, [
-        [0, -1, { yaw: 0.62, pitch: 0.2, dist: 2400, tx: -200, ty: 0, tz: 0, cx: 960, cy: 520 }], [0, 6, { yaw: 0.4, tx: 300 }],
-        [1, 0, { yaw: 0.2, pitch: 0.16, dist: 1700, tx: 900 }], [2, 0, { yaw: 0.75, pitch: 0.28, dist: 2300, tx: 300, tz: -300 }],
-        [3, 0, { yaw: 0.85, pitch: 0.3, dist: 2600, tx: 200, tz: -350 }],
-      ], { floorY: -300 });
-      const st = S.p(0, 0.6, 0) * (1 - S.p(2, 0.6, 0));
-      const layerX = i => -900 + i * 62;
-      const fly = clamp((S.T(0) - 1.5) / 9);
-      const cur = Math.min(23, Math.floor(fly * 24));
-      if (st > 0) {
-        for (let i = 0; i < 24; i++) S3.gate(ctx, cam, layerX(i), 0, 0, 380, 220, { color: i <= cur && fly > 0 ? E.mix(THEME.a, THEME.b, i / 23) : COL.faint, alpha: st * (i <= cur && fly > 0 ? 0.9 : 0.4), fill: i === cur && fly < 1 ? 0.18 : 0.04, lw: 1.6 });
-        const bx = lerp(-1080, 720, fly) + (S.b >= 1 ? lerp(0, 220, S.p(1, 0.8, 0.5)) : 0);
-        S3.block(ctx, cam, { x: bx, y: 0, z: 0, w: 60, h: 300, d: 120, cells: [12, 3, 4], seed: 191, alpha: st, color: THEME.a, glow: THEME.a, tags: { h: ['C', 1024], d: ['T', 201] } });
-        if (fly > 0 && fly < 1) txt(ctx, `layer ${cur + 1} / 24`, 960, 860, { size: 34, weight: 800, mono: true, align: 'center', color: THEME.a, alpha: st });
-        S3.caption(ctx, cam, layerX(11.5), 260, 0, '≈ 302 M weights · 96 % of the model', { size: 26, mono: false, weight: 700, color: COL.text, alpha: S.p(0, 0.6, 4) * st * (1 - S.p(1, 0.5, 0)) });
-        // final layer norm
-        const fl = S.p(1, 0.6, 0) * st;
-        S3.gate(ctx, cam, 820, 0, 0, 400, 240, { color: COL.A, alpha: fl, fill: 0.1, label: 'final LayerNorm' });
-        S3.caption(ctx, cam, 1060, 260, 0, 'last hidden state', { size: 26, mono: false, weight: 700, color: COL.B, alpha: S.p(1, 0.6, 2) * st });
-        S3.caption(ctx, cam, 1060, -250, 0, RES, { size: 28, alpha: S.p(1, 0.6, 3) * st });
-      }
-      // 25 hidden states fanned out in depth
-      const hs = S.p(2, 0.8, 0.3);
-      if (hs > 0) {
-        const useful = S.p(3, 0.8, 4);
-        for (let i = 24; i >= 0; i--) {
-          const k = easeOut4((S.T(2) - 0.5 - (24 - i) * 0.06) / 0.5) + (S.b > 2 ? 1 : 0);
-          const u = Math.exp(-((i - 5) ** 2) / 40);            // illustrative: lower layers matter more
-          const col = useful > 0 ? E.mix(COL.faint, COL.B, u * useful + (1 - useful) * 0.5) : E.mix(THEME.a, THEME.b, i / 24);
-          S3.block(ctx, cam, { x: 0, y: 0, z: -i * 34, w: 300, h: 230, d: 8, cells: [6, 8, 1], seed: 200 + i, alpha: hs * clamp(k) * (0.55 + 0.45 * (i === 0 || i === 24 ? 1 : 0)), color: col,
-            fn: (r, c) => vcol(noise(r, c, 200 + i) * (0.4 + 0.5 * (useful > 0 ? u : 1)), 0.85) });
-        }
-        S3.caption(ctx, cam, -180, 150, 0, 'h₀  input to layer 1', { size: 22, mono: false, weight: 700, align: 'right', alpha: S.p(2, 0.6, 3) });
-        S3.caption(ctx, cam, -180, 150, -24 * 34, 'h₂₄  output of layer 24', { size: 22, mono: false, weight: 700, align: 'right', alpha: S.p(2, 0.6, 4) });
-        mtxt(ctx, 'torch.stack(hidden_states) → ({K:25}, {B:B}, {T:201}, {C:1024})', 960, 880, { size: 28, mono: true, align: 'center', alpha: S.p(2, 0.6, 6) * (1 - S.p(3, 0.5, 0)) });
-        if (useful > 0) {
-          X.card(ctx, 1240, 240, 600, 330, useful);
-          txt(ctx, 'for spotting deepfakes', 1280, 292, { size: 26, weight: 700, alpha: useful });
-          txt(ctx, 'lower layers: most discriminative', 1280, 340, { size: 24, weight: 700, color: COL.B, alpha: useful });
-          txt(ctx, 'upper layers: weaker signal', 1280, 380, { size: 24, weight: 600, color: COL.dim, alpha: useful });
-          txt(ctx, 'El Kheir et al., 2025 (layer-wise analysis)', 1280, 430, { size: 18, color: COL.faint, alpha: useful });
-          mtxt(ctx, 'h = Σₗ softmax(w)ₗ · hₗ', 1280, 500, { size: 28, mono: true, alpha: S.p(3, 0.6, 9) });
-          txt(ctx, 'colours: illustration, not measured weights', 1280, 545, { size: 17, color: COL.faint, alpha: S.p(3, 0.6, 9) });
-        }
-      }
-    },
-  });
 })();

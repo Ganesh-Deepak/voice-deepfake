@@ -640,6 +640,9 @@
       bd: i => beats[i].dur / beats[i].k,
       vis: (a, z, din = 0.7, dout = 0.5) => S.p(a, din) * (z == null ? 1 : 1 - S.p(z, dout)),
       on: i => S.T(i) >= 0,
+      // design-time offset of sentence j inside beat i, so a reveal can land on the words that name it
+      st: (i, j) => { const B = beats[i], q = B && B.sentences[Math.min(j, B.sentences.length - 1)]; return q ? q.start / B.k : 0; },
+      ps: (i, j, d = 0.6, dl = 0) => S.p(i, d, S.st(i, j) + dl),
       local: t, // seconds since the scene started
     };
     return S;
@@ -942,7 +945,7 @@
     if (t <= 0) return;
     const v = easeOut(t / 0.7);
     ctx.save();
-    ctx.fillStyle = `rgba(6,9,15,${0.96 * v})`; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = `rgba(6,9,15,${v})`; ctx.fillRect(0, 0, W, H);   // fully opaque, so no ghost of the last scene
     const g = ctx.createRadialGradient(W * 0.3, H * 0.45, 0, W * 0.3, H * 0.45, 900);
     g.addColorStop(0, rgba(THEME.a, 0.12 * v)); g.addColorStop(1, rgba(THEME.a, 0));
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);

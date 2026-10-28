@@ -22,9 +22,9 @@ import soundfile as sf
 
 SR = 24000
 VOICE, SPEED = "af_heart", 1.0
-GAP = 0.34          # between sentences inside a beat
-BEAT_TAIL = 0.62    # after the last sentence of a beat
-LEAD = 1.45         # scene start -> first word (room for the chapter title card)
+GAP = 0.5           # between sentences inside a beat
+BEAT_TAIL = 1.3     # hold after a beat, so the picture lands before the next idea
+LEAD = 1.8          # scene start -> first word (room for the chapter title card)
 LEAD_NO_HEADER = 1.1
 TAIL = 1.05
 TAIL_LAST = 6.0     # room for the end card
@@ -141,6 +141,9 @@ def main():
         for text in sc["beats"]:
             st, sents = 0.0, []
             for s in split_sentences(text):
+                hold = re.match(r"\[\+(\d+(?:\.\d+)?)\]\s*", s)   # "[+1.5] Next sentence." = extra pause before it
+                if hold:
+                    st, s = r3(st + float(hold.group(1))), s[hold.end():]
                 a = voice.say(to_speech(s))
                 d = r3(len(a) / SR)
                 sents.append({"text": to_caption(s), "start": r3(st), "dur": d})

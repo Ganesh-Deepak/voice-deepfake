@@ -5,12 +5,13 @@ voice-deepfake detection. Watch them at **https://ganesh-deepak.github.io/voice-
 
 | # | Episode | What you follow |
 |---|---------|-----------------|
-| 1 | **XLS-R 300M** (`#xlsr`) | 64,600 samples → 7 convolutions (LayerNorm + GELU) → projection → positional conv → 24 pre-norm transformer layers (16 heads, FFN 4096) → `(B, 201, 1024)`; 25 hidden states; pre-training (quantizer, contrastive loss); using it as a spoofing front end |
+| 1 | **XLS-R 300M** (`#xlsr`) | 1 s = 16,000 samples → 7 convolutions (LayerNorm + GELU) → projection → positional conv → 24 pre-norm transformer layers (16 heads, FFN 4096) → `(B, 49, 1024)`, and a 4 s detector crop of 64,600 samples → `(B, 201, 1024)`; 25 hidden states; pre-training (quantizer, contrastive loss); using it as a spoofing front end |
 | 2 | **AASIST back-end** (`#aasist`) | XLS-R `(B, 201, 1024)` → features as an image → residual encoder → spectral and temporal nodes → graph attention, HS-GAL, readout → 2 logits |
 | 3 | **XLSR-MamBo** (`#mambo`) | XLS-R `(B, 208, 1024)` → 5 MamBo layers (Hydra ×3, SwiGLU, attention, SwiGLU) → gated attention pooling → 2 logits |
 
 The player tracks the tensor shape in a bar at the bottom of every frame, has chapters,
-karaoke captions, a music toggle and keyboard controls (Space, ←/→, C, M, F).
+karaoke captions, a music toggle, full screen (the ⛶ button, F or a double-click; on phones it
+turns to landscape) and keyboard controls (Space, ←/→, C, M, F).
 
 ## Every number is checked
 
@@ -29,8 +30,12 @@ ACL 2026 (XLSR-MamBo, [code](https://github.com/saki-ciallo/XLSR-MamBo)).
 
 ## How it is made
 
-- `src/engine.js` is a deterministic canvas engine and `src/space.js` its 3-D layer (perspective camera, shaded tensor blocks with dimension tags, layer stacks, dust, floor grid): `renderAt(t)` draws the frame for time `t`,
-  so the web player, scrubbing, and the MP4 renderer all show the same frame.
+- `src/engine.js` is a deterministic canvas engine: `renderAt(t)` draws the frame for time `t`,
+  so the web player, scrubbing, and the MP4 renderer all show the same frame. `src/space.js` is a
+  small 3-D layer (perspective camera, shaded tensor blocks) kept for the cold open and the FFN;
+  the teaching scenes are flat, so every shape stays readable.
+- Reveals are tied to the narration: `S.ps(beat, sentence)` fades an element in on the sentence
+  that names it, and the shape bar changes when the voice states the new shape.
 - **Motion layer.** Primitives know when they are entering (their alpha comes from a running
   tween) and perform a real entrance: text rises behind a mask wipe, panels trace their border
   with a pen tip, matrices materialise cell by cell, chips spring in. Scene boundaries are
@@ -59,4 +64,24 @@ pip install playwright && playwright install chromium
 python tools/render.py xlsr --out .out/ep1-xlsr-300m.mp4
 ```
 
+A sentence that starts with `[+1.5]` in a beat gets an extra 1.5 s pause before it, so a result
+can sit on screen before the next idea.
+
 Serve the folder with any static server (`python -m http.server`) and open `index.html`.
+
+## Reviewing an episode
+
+The builder is the worst judge of their own video, so each episode is watched as images and
+numbers and scored by a separate reviewer before it ships
+(`.claude/skills/explainer-review/SKILL.md`, rubric in `tools/review/rubric.md`, adapted from
+*nl-video-score* and the *motion-graphic* skill's critique loop):
+
+```bash
+python tools/review/review.py xlsr --out review/xlsr/round-1   # storyboards with the spoken line under each frame,
+                                                              # 8 fps motion strips, cuts, pacing/readability metrics
+```
+
+The reviewer checks nine defects (narration out of sync with the picture, shapes spoken but not
+shown, ideas used before they are explained, rushed or dead stretches, overlaps, broken motion)
+and scores clarity, shape legibility, sync, pacing, motion and polish out of 100.
+Each round's `review.md` and `metrics.md` are kept in `review/`.
