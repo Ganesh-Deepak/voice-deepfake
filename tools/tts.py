@@ -27,7 +27,7 @@ BEAT_TAIL = 1.3     # hold after a beat, so the picture lands before the next id
 LEAD = 1.8          # scene start -> first word (room for the chapter title card)
 LEAD_NO_HEADER = 1.1
 TAIL = 1.05
-TAIL_LAST = 6.0     # room for the end card
+TAIL_LAST = 7.0     # room for the end card (its subtitle needs ~5.5 s to read)
 
 # Spoken text -> what the TTS actually reads (pronunciation only).
 SAY = [

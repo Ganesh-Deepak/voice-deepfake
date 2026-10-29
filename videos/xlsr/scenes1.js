@@ -25,7 +25,7 @@
     id: 'x_intro', chapter: 0, title: 'Introduction', noHeader: true,
     beats: [
       "Welcome. This is X L S R, the speech model with three hundred million parameters that sits at the front of today's strongest voice deepfake detectors. In this video we'll follow the numbers through it, one tensor at a time, from raw audio to the features a detector reads.",
-      "X L S R was pre-trained by Meta on about four hundred and thirty-six thousand hours of unlabeled speech, in one hundred and twenty-eight languages. Under the hood it's a wav2vec 2.0 model, scaled up. Its three hundred million parameter version stacks twenty-four transformer layers, each one thousand and twenty-four numbers wide, with sixteen attention heads.",
+      "X L S R was pre-trained by Meta on about four hundred and thirty-six thousand hours of unlabeled speech, in one hundred and twenty-eight languages. Under the hood it's a wav2vec 2.0 model, scaled up. Its three hundred million parameter version stacks twenty-four transformer layers. [+0.5] Each layer is one thousand and twenty-four numbers wide, with sixteen attention heads.",
       "We'll build every piece from scratch: convolution, normalization, matrix multiplication and attention. And because tensor shapes are where most of the confusion lives, the capsule at the bottom of the screen always shows the shape we're holding right now.",
     ],
     hud: S => S.b >= 2 ? { stage: 0, shape: '({B:B}, {T:16000})' } : null,
@@ -44,14 +44,13 @@
       if (b1 > 0) {
         const h = lerp(240, 330, grow), w = 300;
         S3.block(ctx, cam, { x: 0, y: 0, z: 0, w, h, d: 90, cells: [grow > 0.5 ? 12 : 9, 16, 3], seed: 11, reveal: S.l(0, 1.2, 3.7), alpha: b1 * gone, color: THEME.a, glow: THEME.b,
-          tags: { w: ['T', 201], h: ['C', grow > 0.5 ? 1024 : 512], d: ['B', 'B'] } });
+        });
         // 24 layer plates around it
         for (let i = 0; i < 24; i++) {
           const k = easeOut4((T - 9.6 - i * 0.05) / 0.5);
           if (k <= 0) continue;
           S3.gate(ctx, cam, -560 + i * 48.7, 0, 0, 470, 260, { color: THEME.b, alpha: 0.55 * k * gone, fill: 0.035, edge: 0.55, lw: 1.4 });
         }
-        if (T > 10) S3.caption(ctx, cam, 0, 300, 0, '24 transformer layers', { size: 26, mono: false, weight: 700, color: THEME.b, alpha: S.p(0, 0.6, 10.6) * gone });
       }
       // beat 1: the data — a globe of 128 languages
       const g = S.p(1, 0.9, 0.2) * (1 - S.p(2, 0.6, 0));
@@ -62,21 +61,25 @@
       }
       // beat 2: the model comes back as the input tensor
       const b2 = S.p(2, 0.8, 0.6);
-      if (b2 > 0) S3.block(ctx, cam, { x: 0, y: -10, z: 0, w: 430, h: 34, d: 70, cells: [1, 28, 3], seed: 5, alpha: b2, color: THEME.a, reveal: S.l(2, 1.0, 0.6), tags: { w: ['T', 16000], d: ['B', 'B'] } });
+      if (b2 > 0) S3.block(ctx, cam, { x: 0, y: -10, z: 0, w: 430, h: 34, d: 70, cells: [1, 28, 3], seed: 5, alpha: b2, color: THEME.a, reveal: S.l(2, 1.0, 0.6) });
       // title block
       E.kicker(ctx, 'DEEPFAKE DETECTORS · SHAPE BY SHAPE', 154, 196, T + 1.0);
       chip(ctx, 760, 188, 'EPISODE 1 / 3', { size: 20, mono: true, color: THEME.a, stroke: rgba(THEME.a, 0.6), fill: rgba(THEME.a, 0.08), alpha: S.p(0, 0.5, 0.3) });
       E.titleRise(ctx, 'XLS-R 300M', 150, 360, T + 0.7, { size: 150, c2: THEME.a });
       txt(ctx, 'the 24-layer front end of modern deepfake detectors', 156, 428, { size: 34, weight: 500, color: COL.dim, alpha: S.p(0, 0.9, 0.6) });
       // stats grid
-      const stats = [[315.4, 1, ' M', 'parameters'], [24, 0, '', 'transformer layers'], [1024, 0, '', 'numbers per frame'], [16, 0, '', 'attention heads'], [128, 0, '', 'languages'], [436, 0, ' K', 'hours of speech']];
+      // [value, label, sentence of beat 1 that says it, design-time offset into that sentence]
+      const stats = [['315.4 M', 'parameters', 2, 0.3], ['24', 'transformer layers', 2, 2.4], ['1,024', 'numbers per frame', 3, 0.6], ['16', 'attention heads', 3, 2.6],
+        ['128', 'languages', 0, 6.6], ['436 K', 'hours of speech', 0, 2.6]];
       const so = 1 - S.p(2, 0.5, 0);
-      stats.forEach(([v, d, suf, lab], i) => {
-        const t0 = (i < 4 ? 1.0 + i * 0.9 : 3.6 + (i - 4) * 0.9), x = 154 + (i % 3) * 300, y = 600 + Math.floor(i / 3) * 140;
-        const tt = S.T(1) - t0;
-        E.countUp(ctx, v, d, x, y, tt, { size: 58, suf, color: i === 0 ? THEME.a : COL.text, alpha: so });
-        txt(ctx, lab, x + 2, y + 36, { size: 22, weight: 600, color: COL.dim, alpha: clamp((tt - 0.2) / 0.4) * so });
+      stats.forEach(([v, lab, sn, dl], i) => {
+        const a = S.ps(1, sn, 0.6, dl) * so, x = 154 + (i % 3) * 300, y = 600 + Math.floor(i / 3) * 140;
+        if (a <= 0) return;
+        txt(ctx, v, x, y + 14 * (1 - easeOut4(a)), { size: 58, weight: 700, mono: 'display', color: i === 0 ? THEME.a : COL.text, alpha: a });
+        txt(ctx, lab, x + 2, y + 36, { size: 22, weight: 600, color: COL.dim, alpha: a });
       });
+      const w2 = S.ps(1, 1, 0.6) * so;
+      if (w2 > 0) chip(ctx, 154, 860, 'wav2vec 2.0: Meta’s 2020 self-supervised speech model', { size: 24, color: COL.H, stroke: rgba(COL.H, 0.6), fill: rgba(COL.H, 0.08), alpha: w2 });
       // beat 2: what we'll build, and where to look
       const topics = [['1-D convolution', COL.K], ['layer norm', COL.A], ['matrix multiplication', COL.C], ['self-attention', COL.H]];
       let x = 154;
@@ -98,7 +101,7 @@
   S_.push({
     id: 'overview', chapter: 1, title: 'The big picture',
     beats: [
-      "Here is the whole journey in one picture. On the left, raw audio: a long list of numbers. We'll follow one second of it, because small numbers are easier to see.",
+      "Here is the whole journey in one picture. On the left, raw audio: a long list of numbers. [+0.8] We'll follow one second of it, because small numbers are easier to see.",
       "First, a stack of seven convolution layers, called the feature encoder, squeezes those numbers into a short sequence of frames. One frame every twenty milliseconds, each described by five hundred and twelve numbers. PyTorch keeps these channels first: B, by five hundred and twelve channels, by forty-nine frames.",
       "A small projection widens each frame to one thousand and twenty-four numbers: the width of the whole model.",
       "Then a transformer, twenty-four layers deep, lets every frame look at every other frame, so each one becomes aware of its context.",
@@ -110,7 +113,11 @@
       { stage: 5, shape: '({B:B}, {T:49}, {C:1024})' }, { stage: 6, shape: '({B:B}, {T:49}, {C:1024})' }][Math.min(S.b, 4)],
     draw(ctx, S) {
       const y = 290, h = 210, cy = y + h / 2;
-      const hl = i => S.b === i ? COL.A : null;
+      const on6 = () => {
+        const t6 = S.T(6);
+        return t6 >= S.st(6, 3) ? [] : t6 >= S.st(6, 2) ? [2, 3, 4] : t6 >= S.st(6, 1) ? [0, 1] : [];
+      };
+      const hl = i => (S.b === 6 ? on6().includes(i) : S.b === i) ? COL.A : null;
       const q = 1 - S.p(6, 0.8);
       // waveform box
       const a0 = S.p(0);
@@ -169,7 +176,7 @@
         // each stage's shape appears when the stage is introduced, and stays
         const a = Math.max(S.p(6, 0.6, [0.2, 3.2, 5.8, 8.2, 9.4][i]), [S.p(0, 0.6, 2.5), S.ps(1, 2), S.p(2, 0.6, 2), S.p(3, 0.6, 3), S.p(4, 0.6, 1.5)][i]);
         if (a <= 0) return;
-        mtxt(ctx, s[1], s[0], 575, { size: 27, mono: true, align: 'center', alpha: a, color: COL.dim });
+        mtxt(ctx, s[1], s[0], 575, { size: hl(i) ? 30 : 27, mono: true, align: 'center', alpha: a, color: hl(i) ? COL.text : COL.dim });
       });
       // beat 1 callout: what one frame is
       const fr = S.ps(1, 1) * (1 - S.p(2, 0.5, 0));
@@ -189,7 +196,7 @@
       "Let's start with vocabulary. A single number is called a scalar.",
       "A list of numbers is a vector. Its shape is just its length. This one has shape five.",
       "A grid of numbers is a matrix. Its shape is rows by columns. This one is three by five.",
-      "Stack several grids and you have a three-dimensional tensor, whose shape has three numbers. A tensor is simply an array with any number of axes, and the shape tells you how long each axis is.",
+      "Stack several grids and you have a three-dimensional tensor, whose shape has three numbers. [+1] A tensor is simply an array with any number of axes, and the shape tells you how long each axis is.",
       "In this video every axis gets a name and a color. Green B is the batch: how many audio clips we process at once. Blue T is time: audio samples, or later, frames. Orange C is channels, or features: how many numbers describe each moment in time. Later, purple H will count attention heads.",
       "One rule to remember. Most operations change only one axis and leave the others alone. Understanding X L S R is mostly about knowing which axis each step touches.",
     ],
@@ -219,7 +226,8 @@
       txt(ctx, 'matrix', 1085, 470, { size: 30, weight: 700, align: 'center', alpha: a2 });
       txt(ctx, 'shape (3, 5)', 1085, 515, { size: 26, mono: true, align: 'center', color: COL.dim, alpha: a2 });
       // 3-D
-      const a3 = S.p(3) * fade;
+      const kT = S.p(4, 0.6) * (1 - S.p(5, 0.6));
+      const a3 = S.p(3) * lerp(fade, 1, kT);
       if (a3 > 0) {
         ctx.save(); ctx.globalAlpha = a3;
         stack(ctx, 3, 34, 34, i => {
@@ -229,8 +237,20 @@
         });
         ctx.restore();
       }
+      // the same tensor read with named axes: 3 clips (B) of 3 channels (C) by 5 time steps (T)
+      const ax = [1, 2, 3].map(j => kT * S.ps(4, j, 0.6, 0.2));
+      if (ax[0] > 0) {
+        ctx.save(); ctx.globalAlpha = ax[0];
+        line(ctx, 1690, cy + 110, 1758, cy + 42, COL.B, 3);
+        txt(ctx, 'B = 3', 1770, cy + 92, { size: 26, weight: 700, color: COL.B });
+        ctx.restore();
+      }
+      if (ax[1] > 0) { ctx.save(); ctx.globalAlpha = ax[1]; dimTop(ctx, 1448, cy - 148, 300, 'T = 5', COL.T, 26); ctx.restore(); }
+      if (ax[2] > 0) { ctx.save(); ctx.globalAlpha = ax[2]; dimLeft(ctx, 1380, cy - 80, 180, 'C = 3', COL.C, 26); ctx.restore(); }
       txt(ctx, '3-D tensor', 1560, 470, { size: 30, weight: 700, align: 'center', alpha: a3 });
-      txt(ctx, 'shape (3, 3, 5)', 1560, 515, { size: 26, mono: true, align: 'center', color: COL.dim, alpha: a3 });
+      const named = S.ps(4, 3, 0.6, 0.2) * (S.b >= 4 ? 1 : 0);
+      txt(ctx, 'shape (3, 3, 5)', 1560, 515, { size: 26, mono: true, align: 'center', color: COL.dim, alpha: a3 * (1 - named) });
+      if (named > 0) mtxt(ctx, '({B:3}, {C:3}, {T:5})', 1560, 515, { size: 28, mono: true, align: 'center', alpha: a3 * named });
       // definition
       const d3 = S.vis(3, 4, 0.7, 0.4);
       if (d3 > 0) {
@@ -242,7 +262,7 @@
         ['C', 'channels / features', 'how many numbers describe one moment'], ['H', 'heads', 'parallel attention heads (later)']];
       const a4 = S.vis(4, 5, 0.7, 0.5);
       if (a4 > 0) leg.forEach((l, i) => {
-        const a = a4 * S.p(4, 0.6, [0.3, 3.2, 7.6, 14.5][i]);
+        const a = a4 * S.ps(4, i + 1, 0.6, 0.2);
         const x = i % 2 ? 1000 : 170, yy = 640 + Math.floor(i / 2) * 120;
         rrect(ctx, x, yy, 80, 80, 14, rgba(COL[l[0]], 0.15 * a), rgba(COL[l[0]], a), 3);
         txt(ctx, l[0], x + 40, yy + 42, { size: 44, weight: 800, align: 'center', base: 'middle', color: COL[l[0]], alpha: a });
@@ -258,9 +278,12 @@
         arrow(ctx, 850, 787, 1040, 787, { alpha: b, color: COL.dim });
         txt(ctx, 'linear layer', 945, 765, { size: 22, align: 'center', color: COL.dim, alpha: b });
         mtxt(ctx, '({B:B}, {T:49}, {C:1024})', 1290, 800, { size: 42, mono: true, align: 'center', alpha: b, color: COL.dim });
-        const c = S.p(5, 0.6, 4);
-        rrect(ctx, 1395, 752, 110, 66, 10, null, rgba(COL.C, c), 3);
-        txt(ctx, 'only C changed', 1450, 870, { size: 24, weight: 600, align: 'center', color: COL.C, alpha: c });
+        const c = S.p(5, 0.6, 4), so = { size: 42, mono: true };
+        const sw = mwidth(ctx, '({B:B}, {T:49}, {C:1024})', so), xs = 1290 - sw / 2 + mwidth(ctx, '(B, 49, ', so), w4 = mwidth(ctx, '1024', so);
+        rrect(ctx, xs - 10, 762, w4 + 20, 58, 10, null, rgba(COL.C, c), 3);
+        txt(ctx, 'only C changed', xs + w4 / 2, 870, { size: 24, weight: 600, align: 'center', color: COL.C, alpha: c });
+        // a compact legend stays docked while the example is read
+        [['B', 'batch'], ['T', 'time'], ['C', 'channels'], ['H', 'heads']].forEach(([k, n], i) => chip(ctx, 560 + i * 210, 560, `${k}  ${n}`, { size: 22, color: COL[k], stroke: rgba(COL[k], 0.7), fill: rgba(COL[k], 0.1), alpha: a5 }));
       }
     },
   });
@@ -281,7 +304,7 @@
       "Now, what is audio to a computer? A microphone measures air pressure, and we record that pressure many times per second.",
       "X L S R expects sixteen thousand measurements per second. That's a sampling rate of sixteen kilohertz. Each measurement is one number, called a sample, usually between minus one and one.",
       "Zoom in, and you can see the individual samples. Every dot is one number. Neighbouring samples are one sixteen-thousandth of a second apart: sixty-two and a half microseconds.",
-      "So one second of audio is a vector of sixteen thousand numbers. A batch of B clips of the same length has shape B by sixteen thousand. With a batch of one, it's one by sixteen thousand.",
+      "So one second of audio is a vector of sixteen thousand numbers. [+1] A batch of B clips of the same length has shape B by sixteen thousand. With a batch of one, it's one by sixteen thousand.",
       "Before entering the model, each clip is normalized. The Hugging Face feature extractor for X L S R subtracts the clip's mean and divides by its standard deviation, so every clip has mean zero and variance one. Loud and quiet recordings end up on the same scale. The shape doesn't change.",
       "Notice what's missing: there's no spectrogram, and no hand-crafted features. The model reads the raw waveform directly. For deepfake detection that's attractive, because subtle artifacts left behind by a vocoder can survive in the raw samples, where a spectrogram might blur them.",
     ],
@@ -395,7 +418,7 @@
         txt(ctx, 'after normalization', R + ww / 2, 370, { size: 26, weight: 700, align: 'center', color: COL.A });
         txt(ctx, 'mean = 0.000   std = 1.000', R + ww / 2, 680, { size: 22, mono: true, align: 'center', color: COL.dim, alpha: nb });
         arrow(ctx, L + ww + 30, yc, R - 30, yc, { color: COL.dim });
-        mtxt(ctx, 'shape unchanged: ({B:B}, {T:16000})', W / 2, 800, { size: 30, align: 'center', weight: 600, alpha: S.p(4, 0.6, 9) });
+        mtxt(ctx, 'shape unchanged: ({B:B}, {T:16000})', W / 2, 800, { size: 30, align: 'center', weight: 600, alpha: S.ps(4, 3, 0.6) });
         ctx.restore();
       }
       // no spectrogram
@@ -412,7 +435,19 @@
         box(ctx, 1460, 355, 230, 140, ['XLS-R', 'reads raw samples'], { size: 30, color: COL.A });
         txt(ctx, 'raw waveform in, directly', 1310, 640, { size: 28, weight: 700, align: 'center', color: COL.A });
         const b = S.p(5, 0.8, 7);
+        if (b > 0) {
+          // a short glitch: one sharp spike in the raw samples, a soft blur across a whole window in the spectrogram
+          ctx.globalAlpha = a5 * b;
+          ctx.strokeStyle = COL.R; ctx.lineWidth = 3; ctx.beginPath();
+          ctx.moveTo(1138, 425); ctx.lineTo(1142, 330); ctx.lineTo(1146, 515); ctx.lineTo(1150, 425); ctx.stroke();
+          ctx.beginPath(); ctx.arc(1144, 425, 46, 0, 7); ctx.stroke();
+          txt(ctx, 'glitch: sharp', 1144, 300, { size: 22, weight: 700, align: 'center', color: COL.R });
+          rrect(ctx, 600, 300, 70, 250, 8, rgba(COL.R, 0.18), rgba(COL.R, 0.7), 2);
+          txt(ctx, 'smeared over 25 ms', 635, 582, { size: 22, weight: 700, align: 'center', color: COL.R });
+          ctx.globalAlpha = a5;
+        }
         wrap(ctx, 'For deepfake detection: subtle vocoder artifacts can survive in the raw samples, where a spectrogram might smear them.', 200, 760, 1520, 46, { size: 32, alpha: b, color: COL.text });
+        txt(ctx, 'vocoder: the part of a speech synthesizer that turns its features back into a waveform', 200, 880, { size: 24, color: COL.dim, alpha: b });
         ctx.restore();
       }
     },
@@ -426,12 +461,12 @@
     beats: [
       "The first learned operation is a one-dimensional convolution. Here's a tiny signal of ten samples, and a kernel: three learned weights.",
       "Place the kernel at the start of the signal. Multiply each weight by the sample underneath it, and add up the products. That single sum is one output number.",
-      "Then slide the kernel along. How far it jumps each time is called the stride. With a stride of two, it moves two samples at a time.",
-      "Keep sliding, until the kernel no longer fits. We got four output numbers.",
+      "Then slide the kernel along. How far it jumps each time is called the stride. [+1] With a stride of two, it moves two samples at a time.",
+      "Keep sliding, until the kernel no longer fits. [+1] We got four output numbers.",
       "The general rule for the output length: take the input length, subtract the kernel size, divide by the stride, round down, and add one. Here: ten minus three is seven. Divided by two is three point five. Round down to three, and add one: four. Remember this formula. It explains every length in the feature encoder.",
       "One kernel detects one kind of pattern. This one, with weights one, zero, minus one, responds to how fast the signal is changing. But we want to detect many patterns, so we run many kernels in parallel. Each kernel produces its own output row, called a channel.",
       "With five hundred and twelve kernels, one input row becomes five hundred and twelve output rows. In code, the waveform first gets a channel axis, so B by sixteen thousand becomes B by one by sixteen thousand. The first convolution turns that into B by five hundred and twelve by three thousand one hundred and ninety-nine. PyTorch stores its weights as out-channels, by in-channels, by kernel size: five hundred and twelve by one by ten. X L S R's convolutions also have a bias: one learned number per output channel.",
-      "From the second layer on, the input itself has five hundred and twelve channels. Now each kernel spans all input channels at once. It's a small block of five hundred and twelve by three weights, and its output is the sum over all channels and all three positions. A layer with five hundred and twelve such kernels stores a weight tensor of five hundred and twelve, by five hundred and twelve, by three: about seven hundred and eighty-six thousand numbers, plus five hundred and twelve biases.",
+      "From the second layer on, the input itself has five hundred and twelve channels. Now each kernel spans all input channels at once. It's a small block of five hundred and twelve by three weights, and its output is the sum over all channels and all three positions. [+1.2] A layer with five hundred and twelve such kernels stores a weight tensor of five hundred and twelve, by five hundred and twelve, by three: about seven hundred and eighty-six thousand numbers, plus five hundred and twelve biases.",
     ],
     hud: S => {
       // the channel axis enters the capsule only when the voice introduces it (beat 6, sentence 1)
@@ -460,7 +495,8 @@
         if (S.on(2)) pos = lerp(0, 2, easeIO(S.T(2) / 1.0));
         if (S.on(3)) {
           const t = S.T(3);
-          pos = t < 3.3 ? lerp(2, 4, easeIO(t / 0.8)) : lerp(4, 6, easeIO((t - 3.3) / 0.8));   // hold each stop ~2.5 s
+          const t2 = S.st(3, 1) - 1.6;   // the last stop is reached before "we got four"
+          pos = t < t2 ? lerp(2, 4, easeIO(t / 0.8)) : lerp(4, 6, easeIO((t - t2) / 0.8));
         }
         if (S.on(4)) pos = 6;
         const kx = x0 + pos * cw;
@@ -482,7 +518,7 @@
           ctx.restore();
         }
         // ghost at 8
-        const ga = S.vis(3, 4) * S.p(3, 0.5, 3.4);
+        const ga = S.vis(3, 4) * S.p(3, 0.5, S.st(3, 1) - 0.4);
         if (ga > 0) {
           ctx.save(); ctx.globalAlpha = A * ga; ctx.setLineDash([8, 8]);
           rrect(ctx, x0 + 8 * cw - 4, ys - 8, 3 * cw + 8, 96, 12, null, COL.R, 3);
@@ -501,9 +537,9 @@
         // outputs
         const yo = 650;
         txt(ctx, 'output y', x0 - 20, yo + 48, { size: 26, weight: 700, align: 'right', color: COL.C, alpha: S.p(1, 0.5, 2) });
-        const outT = [[1, 2.0], [2, 1.6], [3, 1.0], [3, 4.0]];
+        const outT = [[1, 2.0], [2, 1.6], [3, 1.0], [3, -1]];
         OUT.forEach((v, i) => {
-          const a = S.p(outT[i][0], 0.5, outT[i][1]);
+          const a = S.p(outT[i][0], 0.5, outT[i][1] < 0 ? S.st(3, 1) - 0.6 : outT[i][1]);
           if (a <= 0) return;
           ctx.save(); ctx.globalAlpha = A * a;
           numRow(ctx, x0 + (2 * i + 1) * cw, yo, [v], cw, 80, { size: 26, d: 1, stroke: COL.C });
@@ -527,7 +563,7 @@
         cells(ctx, xi, yi, 1, T, cw, 44, (r, c) => vcol(WAVE[1600 + c * 9] * 1.1, 0.9), 3);
         const kc = [COL.K, '#9be38f', '#7cc8ff', '#ff9fb7'];
         for (let k = 0; k < 4; k++) {
-          const a = S.p(5, 0.5, 5 + k * 0.5);
+          const a = k === 0 ? S.ps(5, 1, 0.5) : S.ps(5, 2, 0.5, 0.3 + k * 0.5);
           const yk = 230 + k * 110;
           ctx.globalAlpha = Bv * a;
           arrow(ctx, xi + T * cw + 12, yi + 22, 880, yk + 22, { color: rgba(kc[k], 0.7), lw: 2 });
@@ -536,8 +572,15 @@
           cells(ctx, 1120, yk, 1, 12, 52, 44, (r, c) => vcol(noise(k, c, 21) * 0.9, 0.9), 3);
           txt(ctx, 'channel ' + (k + 1), 1760, yk + 30, { size: 22, weight: 600, color: COL.C });
         }
-        ctx.globalAlpha = Bv * S.p(5, 0.6, 10);
+        ctx.globalAlpha = Bv * S.ps(5, 3, 0.6);
         txt(ctx, 'number of kernels  =  number of output channels', W / 2, 680, { size: 34, weight: 700, align: 'center', color: COL.C });
+        // "with 512 kernels": the four rows become the front of a deep stack
+        const st5 = S.b === 6 ? S.ps(6, 0, 0.6, 0.3) * (1 - S.ps(6, 1, 0.4)) : 0;
+        if (st5 > 0) {
+          ctx.globalAlpha = Bv * st5;
+          for (let q = 5; q >= 1; q--) rrect(ctx, 1120 + q * 12, 230 - q * 12, 624, 374, 8, null, rgba(COL.C, 0.5), 1.5);
+          txt(ctx, '× 512 kernels  →  512 output channels', 1432, 200, { size: 30, weight: 800, align: 'center', color: COL.C });
+        }
         ctx.restore();
       }
       const Bw = S.vis(6, 7);
@@ -554,8 +597,8 @@
         ctx.globalAlpha = Bw;
         mtxt(ctx, '({B:B}, {T:16000})  →  x[:, None]  →  ({B:B}, {C:1}, {T:16000})', 1100, 790, { size: 26, mono: true, align: 'center', alpha: q1 * (1 - q2) });
         mtxt(ctx, '({B:B}, {C:1}, {T:16000})  →  ({B:B}, {C:512}, {T:3199})', 1530, 790, { size: 28, mono: true, align: 'center', alpha: q2 });
-        mtxt(ctx, 'weight: ({C:512}, {C:1}, {K:10})  = (out, in, kernel)', 1530, 845, { size: 24, mono: true, align: 'center', color: COL.dim, alpha: q3 });
-        mtxt(ctx, '+ bias: ({C:512},)  one learned number per output channel', 1530, 895, { size: 24, mono: true, align: 'center', color: COL.K, alpha: q4 });
+        mtxt(ctx, 'weight: ({C:512}, {C:1}, {K:10}) = (out, in, kernel)', 1240, 845, { size: 22, mono: true, color: COL.dim, alpha: q3 });
+        mtxt(ctx, 'bias: ({C:512},), one per output channel', 1240, 895, { size: 22, mono: true, color: COL.K, alpha: q4 });
         ctx.restore();
       }
       // multi-channel input
@@ -606,7 +649,7 @@
       "Let's push one second, sixteen thousand samples, through it, using our formula. Layer one: sixteen thousand minus ten, divided by five, rounded down, plus one. That gives three thousand one hundred and ninety-nine.",
       "Layer two: three thousand one hundred and ninety-nine minus three, divided by two, rounded down, plus one: fifteen hundred and ninety-nine.",
       "Then seven ninety-nine. Three ninety-nine. One ninety-nine. Ninety-nine. And finally, forty-nine.",
-      "Meanwhile, the channel axis goes from one to five hundred and twelve in the first layer, and stays at five hundred and twelve after that. So the output is B, by five hundred and twelve, by forty-nine.",
+      "Meanwhile, the channel axis goes from one to five hundred and twelve in the first layer, and stays at five hundred and twelve after that. [+1] So the output is B, by five hundred and twelve, by forty-nine.",
       "Multiply the strides: five, times two to the sixth, is three hundred and twenty. So each output frame advances three hundred and twenty samples, which at sixteen kilohertz is twenty milliseconds. That's fifty frames per second, minus a little at the edges, which is why one second gives forty-nine frames, not fifty.",
       "And how much audio does one frame see? Trace back through the layers, and each output frame depends on four hundred input samples. That's twenty-five milliseconds. So frames are twenty-five milliseconds wide, and twenty milliseconds apart. They overlap slightly, just like classic speech features.",
       "After each convolution comes an activation function called GELU. It passes positive values through, and squashes negative values towards zero, with a smooth curve instead of a hard corner. Without non-linear steps like this, stacking layers would be pointless: seven linear operations in a row collapse into a single one.",
@@ -627,7 +670,9 @@
         line(ctx, 110, 196, 900, 196, COL.line, 2);
         for (let i = 0; i <= 7; i++) {
           const y = 244 + i * 62;
-          const rowA = i === 0 ? 1 : S.p(0, 0.5, 3 + (i - 1) * 1.1);
+          const rowA = i === 0 ? 1 : i === 1 ? S.ps(0, 3, 0.5) : i <= 5 ? S.ps(0, 4, 0.5, (i - 2) * 0.25) : S.ps(0, 5, 0.5, (i - 6) * 0.25);
+          const hlR = S.b === 0 && ((i === 1 && S.past(0, 3) && !S.past(0, 4)) || (i >= 2 && i <= 5 && S.past(0, 4) && !S.past(0, 5)) || (i >= 6 && S.past(0, 5)));
+          if (hlR) { ctx.globalAlpha = A; rrect(ctx, 112, y - 36, 600, 50, 8, rgba(COL.A, 0.1), rgba(COL.A, 0.7), 2); }
           ctx.globalAlpha = A * rowA;
           txt(ctx, i === 0 ? 'input' : 'conv ' + i, 130, y, { size: 28, weight: 600, color: i === 0 ? COL.dim : COL.text });
           if (i > 0) {
@@ -734,16 +779,18 @@
           else rrect(ctx, x0 + Math.min(cols - 1, hlp) * cw - 3, y0 - 3, cw + 6, rows * ch + 6, 6, null, COL.K, 4);
           ctx.globalAlpha = N;
         };
-        const a1 = S.p(8, 0.6, 0.3), a2 = S.p(8, 0.6, 9);
+        const a1 = S.ps(8, 1, 0.6), a2 = S.ps(8, 2, 0.6);
         ctx.globalAlpha = N * a1;
         txt(ctx, 'GroupNorm, 512 groups', 150 + 330, 190, { size: 32, weight: 800, align: 'center', color: COL.A });
         txt(ctx, 'wav2vec 2.0 base: first conv only', 150 + 330, 230, { size: 24, align: 'center', color: COL.dim });
         draw1(170, 320, 'row', a1);
+        ctx.globalAlpha = N * a1;
         wrap(ctx, 'each channel (row) → mean 0, var 1 across time', 170, 720, 660, 36, { size: 26 });
         ctx.globalAlpha = N * a2;
         txt(ctx, 'LayerNorm', 1050 + 330, 190, { size: 32, weight: 800, align: 'center', color: COL.K });
         txt(ctx, 'XLS-R: after every conv layer', 1050 + 330, 230, { size: 24, align: 'center', color: COL.dim });
         draw1(1070, 320, 'col', a2);
+        ctx.globalAlpha = N * a2;   // the caption arrives with its grid, not before it
         wrap(ctx, 'each frame (column) → mean 0, var 1 across channels', 1070, 720, 660, 36, { size: 26 });
         ctx.globalAlpha = N;
         mtxt(ctx, 'then: learned scale γ and shift β per channel', W / 2, 860, { size: 28, align: 'center', color: COL.dim, alpha: S.p(8, 0.6, 14) });

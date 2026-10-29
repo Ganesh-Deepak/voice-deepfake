@@ -14,7 +14,7 @@
     text: '#e9eef6', dim: '#8d9bb0', faint: '#526075',
     B: '#7ee787', T: '#58a6ff', C: '#ffa657', H: '#d2a8ff', D: '#ff7b9c', K: '#f2cc60',
     A: '#39d0d8', R: '#ff6b6b', G: '#7ee787', W: '#e9eef6', M: '#c792ea',
-    F: '#39d0d8', N: '#d2a8ff', S: '#f2cc60', E: '#c792ea', P: '#ff7b9c',
+    F: '#39d0d8', N: '#d2a8ff', S: '#f2cc60', E: '#c792ea', P: '#ff7b9c', L: '#bef264',
   };
   const THEME = Object.assign({ a: '#39d0d8', b: '#5b7cff', c: '#b06cff' }, (window.VIDEO && window.VIDEO.theme) || {});
 
@@ -593,11 +593,12 @@
     ctx.restore();
   }
   // number counting up to v (decimals d) over ~0.9 s, with a soft landing
+  // a number arrives already final (rising into place): a running count would show wrong values while the voice says the real one
   function countUp(ctx, v, d, x, y, t, o = {}) {
     if (t <= 0) return;
-    const e = easeOutExpo(t / (o.dur || 0.9));
-    const s = (o.pre || '') + (d ? (v * e).toFixed(d) : Math.round(v * e).toLocaleString('en-US')) + (o.suf || '');
-    txt(ctx, s, x, y, { size: o.size || 64, weight: 700, mono: 'display', color: o.color || COL.text, align: o.align || 'left', alpha: (o.alpha ?? 1) * clamp(t / 0.15) });
+    const e = easeOutExpo(t / (o.dur || 0.6));
+    const s = (o.pre || '') + (d ? v.toFixed(d) : Math.round(v).toLocaleString('en-US')) + (o.suf || '');
+    txt(ctx, s, x, y + 16 * (1 - e), { size: o.size || 64, weight: 700, mono: 'display', color: o.color || COL.text, align: o.align || 'left', alpha: (o.alpha ?? 1) * clamp(t / 0.35) });
   }
 
   // ---------- timeline ----------
@@ -638,11 +639,14 @@
       l: (i, d = 1, dl = 0) => clamp((S.T(i) - dl) / d),
       f: i => clamp(S.T(i) * beats[i].k / beats[i].dur),
       bd: i => beats[i].dur / beats[i].k,
-      vis: (a, z, din = 0.7, dout = 0.5) => S.p(a, din) * (z == null ? 1 : 1 - S.p(z, dout)),
+      // a panel that replaces another at a beat start waits until the old one has mostly faded (no ghosted cross-fade)
+      vis: (a, z, din = 0.6, dout = 0.5) => S.p(a, din, a > 0 ? 0.2 : 0) * (z == null ? 1 : 1 - S.p(z, dout)),
       on: i => S.T(i) >= 0,
       // design-time offset of sentence j inside beat i, so a reveal can land on the words that name it
       st: (i, j) => { const B = beats[i], q = B && B.sentences[Math.min(j, B.sentences.length - 1)]; return q ? q.start / B.k : 0; },
       ps: (i, j, d = 0.6, dl = 0) => S.p(i, d, S.st(i, j) + dl),
+      // true once the voice has reached sentence j of beat i (plus dl design-seconds): for HUD shape changes
+      past: (i, j = 0, dl = 0) => S.b > i || (S.b === i && S.T(i) >= S.st(i, j) + dl),
       local: t, // seconds since the scene started
     };
     return S;
@@ -903,7 +907,15 @@
     const n = STAGES.length, segW = Math.min(64, 560 / n), gap = 6, sx = x0 + 34;
     const keys = [];
     HUDS.forEach(k => { if (k.h && k.h.stage != null && (!keys.length || keys[keys.length - 1][1] !== k.h.stage)) keys.push([k.t, k.h.stage]); });
-    const st = h.stage != null && keys.length ? track(t, keys, 220, 24) : -1;
+    // the stage marker eases one step at a time; at a scene cut or a jump of several stages it snaps (no scrubbing)
+    let st = -1;
+    if (h.stage != null && keys.length) {
+      let kk = 0;
+      for (let q = 0; q < keys.length; q++) { if (keys[q][0] <= t + 1e-6) kk = q; else break; }
+      const kt = keys[kk][0], cv = keys[kk][1], pv = kk > 0 ? keys[kk - 1][1] : cv;
+      const atCut = TL.scenes.some(s => Math.abs(s.start - kt) < 0.3);
+      st = Math.abs(cv - pv) === 1 && !atCut ? lerp(pv, cv, easeOut4(clamp((t - kt) / 0.45))) : cv;
+    }
     for (let k = 0; k < n; k++) {
       const x = sx + k * (segW + gap), f = clamp(st - k + 1);
       rrect(ctx, x, cy - 4, segW, 8, 4, 'rgba(120,140,180,0.18)', null);
@@ -912,7 +924,7 @@
     if (st >= 0) {
       const ax = sx + st * (segW + gap) + segW / 2;
       glow(ctx, ax, cy, 40, THEME.a, 0.55);
-      const k = Math.round(st), name = STAGES[clamp(k, 0, n - 1)];
+      const k = Math.round(st), name = h.stageName || STAGES[clamp(k, 0, n - 1)];
       const lx = sx + n * (segW + gap) + 18;
       txt(ctx, `${String(k + 1).padStart(2, '0')}/${String(n).padStart(2, '0')}`, lx, cy + 1, { size: 18, weight: 600, mono: true, base: 'middle', color: COL.faint });
       // stage name rolls when it changes
@@ -924,15 +936,19 @@
     // shape pills (roll up when the shape changes)
     if (h.shape) {
       const tc = cur.t, prevH = (HUDS.slice(0, i).reverse().find(k => k.h && k.h.shape) || {}).h;
-      const e = prevH && prevH.shape !== h.shape ? easeOut4(clamp((t - tc) / 0.45)) : 1;
+      // a new shape replaces the old one in place: the old fades out, then the new fades in with a small lift
+      // (at a scene cut it simply appears)
+      const atCut = TL.scenes.some(s => Math.abs(s.start - tc) < 0.3);
+      const changed = prevH && prevH.shape !== h.shape && !atCut;
+      const e = changed ? clamp((t - tc) / 0.5) : 1, eo = 1 - clamp(e / 0.4), ei = easeOut4(clamp((e - 0.4) / 0.6));
       const right = x0 + w - 30;
       ctx.save(); ctx.beginPath(); ctx.rect(x0 + 700, y0 + 4, w - 720, hh - 8); ctx.clip();
       let sw = 0;
-      if (e < 1) { ctx.save(); ctx.translate(0, -e * 44); drawShape(ctx, prevH.shape, right, cy, 1 - e); ctx.restore(); }
-      ctx.save(); ctx.translate(0, (1 - e) * 44); sw = drawShape(ctx, h.shape, right, cy, e); ctx.restore();
-      if (e < 1) glow(ctx, right - sw / 2, cy, sw * 0.6, THEME.a, 0.35 * (1 - e));
+      if (changed && eo > 0) drawShape(ctx, prevH.shape, right, cy, eo);
+      ctx.save(); ctx.translate(0, (1 - ei) * 10); sw = drawShape(ctx, h.shape, right, cy, ei); ctx.restore();
+      if (changed && e < 1) glow(ctx, right - sw / 2, cy, sw * 0.6, THEME.a, 0.35 * (1 - e));
       ctx.restore();
-      txt(ctx, (h.label || 'tensor shape').toUpperCase(), right - sw - 18, cy + 1, { size: 15, weight: 700, mono: true, align: 'right', base: 'middle', color: COL.faint });
+      txt(ctx, (h.label || 'tensor shape').toUpperCase(), right - sw - 18, cy + 1, { size: 20, weight: 700, mono: true, align: 'right', base: 'middle', color: COL.faint, alpha: changed ? Math.max(eo, ei) : 1 });
     }
     ctx.restore();
   }

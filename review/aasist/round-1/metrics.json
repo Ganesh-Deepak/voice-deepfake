@@ -1,0 +1,659 @@
+{
+ "video": "aasist",
+ "total_min": 17.0,
+ "scenes": [
+  {
+   "id": "a_intro",
+   "title": "Introduction",
+   "dur": 49.5,
+   "words": 111,
+   "wpm_overall": 135,
+   "wpm_speech": 161,
+   "beat_wpm": [
+    135,
+    127,
+    166
+   ],
+   "beats": 3
+  },
+  {
+   "id": "a_overview",
+   "title": "The big picture",
+   "dur": 74.0,
+   "words": 164,
+   "wpm_overall": 133,
+   "wpm_speech": 160,
+   "beat_wpm": [
+    128,
+    145,
+    107,
+    159,
+    153,
+    132
+   ],
+   "beats": 6
+  },
+  {
+   "id": "a_start",
+   "title": "Where the back-end starts",
+   "dur": 73.9,
+   "words": 176,
+   "wpm_overall": 143,
+   "wpm_speech": 169,
+   "beat_wpm": [
+    149,
+    143,
+    162,
+    135
+   ],
+   "beats": 4
+  },
+  {
+   "id": "a_image",
+   "title": "Features as an image",
+   "dur": 90.8,
+   "words": 209,
+   "wpm_overall": 138,
+   "wpm_speech": 165,
+   "beat_wpm": [
+    161,
+    146,
+    148,
+    130,
+    131
+   ],
+   "beats": 5
+  },
+  {
+   "id": "a_conv2d",
+   "title": "2-D convolution",
+   "dur": 73.2,
+   "words": 167,
+   "wpm_overall": 137,
+   "wpm_speech": 165,
+   "beat_wpm": [
+    147,
+    142,
+    141,
+    140
+   ],
+   "beats": 4
+  },
+  {
+   "id": "a_res",
+   "title": "The residual encoder",
+   "dur": 75.0,
+   "words": 186,
+   "wpm_overall": 149,
+   "wpm_speech": 177,
+   "beat_wpm": [
+    158,
+    140,
+    165,
+    152
+   ],
+   "beats": 4
+  },
+  {
+   "id": "a_nodes",
+   "title": "Two views of one image",
+   "dur": 83.6,
+   "words": 183,
+   "wpm_overall": 131,
+   "wpm_speech": 157,
+   "beat_wpm": [
+    146,
+    144,
+    135,
+    130,
+    123
+   ],
+   "beats": 5
+  },
+  {
+   "id": "a_gat",
+   "title": "Graph attention from scratch",
+   "dur": 85.2,
+   "words": 208,
+   "wpm_overall": 147,
+   "wpm_speech": 177,
+   "beat_wpm": [
+    141,
+    147,
+    172,
+    164,
+    150,
+    136
+   ],
+   "beats": 6
+  },
+  {
+   "id": "a_pool",
+   "title": "Graph pooling",
+   "dur": 37.8,
+   "words": 85,
+   "wpm_overall": 135,
+   "wpm_speech": 173,
+   "beat_wpm": [
+    165,
+    140,
+    132
+   ],
+   "beats": 3
+  },
+  {
+   "id": "a_hsgal",
+   "title": "Heterogeneous graph attention (HS-GAL)",
+   "dur": 76.3,
+   "words": 175,
+   "wpm_overall": 138,
+   "wpm_speech": 162,
+   "beat_wpm": [
+    121,
+    143,
+    148,
+    146,
+    148
+   ],
+   "beats": 5
+  },
+  {
+   "id": "a_branch",
+   "title": "Two branches, stacked",
+   "dur": 47.2,
+   "words": 103,
+   "wpm_overall": 131,
+   "wpm_speech": 161,
+   "beat_wpm": [
+    115,
+    136,
+    154
+   ],
+   "beats": 3
+  },
+  {
+   "id": "a_readout",
+   "title": "Readout and training",
+   "dur": 59.8,
+   "words": 142,
+   "wpm_overall": 142,
+   "wpm_speech": 175,
+   "beat_wpm": [
+    151,
+    145,
+    157,
+    141
+   ],
+   "beats": 4
+  },
+  {
+   "id": "a_orig",
+   "title": "The original AASIST, for comparison",
+   "dur": 74.9,
+   "words": 169,
+   "wpm_overall": 135,
+   "wpm_speech": 159,
+   "beat_wpm": [
+    128,
+    148,
+    151,
+    139
+   ],
+   "beats": 4
+  },
+  {
+   "id": "a_code",
+   "title": "Checking it in code",
+   "dur": 43.5,
+   "words": 102,
+   "wpm_overall": 141,
+   "wpm_speech": 174,
+   "beat_wpm": [
+    157,
+    139,
+    153
+   ],
+   "beats": 3
+  },
+  {
+   "id": "a_recap",
+   "title": "Recap",
+   "dur": 75.6,
+   "words": 156,
+   "wpm_overall": 124,
+   "wpm_speech": 158,
+   "beat_wpm": [
+    115,
+    141,
+    126,
+    152,
+    146
+   ],
+   "beats": 5
+  }
+ ],
+ "text_too_brief": [
+  {
+   "text": "CHAPTER 01 / 14",
+   "scene": "a_overview",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "CHAPTER 02 / 14",
+   "scene": "a_start",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "CHAPTER 03 / 14",
+   "scene": "a_image",
+   "seconds": 0.75,
+   "needs": 2.0
+  },
+  {
+   "text": "CHAPTER 04 / 14",
+   "scene": "a_conv2d",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "convolution",
+   "scene": "a_conv2d",
+   "seconds": 1.25,
+   "needs": 1.7
+  },
+  {
+   "text": "CHAPTER 05 / 14",
+   "scene": "a_res",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "CHAPTER 06 / 14",
+   "scene": "a_nodes",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "CHAPTER 07 / 14",
+   "scene": "a_gat",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "CHAPTER 08 / 14",
+   "scene": "a_pool",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "CHAPTER 09 / 14",
+   "scene": "a_hsgal",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "CHAPTER 10 / 14",
+   "scene": "a_branch",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "CHAPTER 11 / 14",
+   "scene": "a_readout",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "CHAPTER 12 / 14",
+   "scene": "a_orig",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "comparison",
+   "scene": "a_orig",
+   "seconds": 1.5,
+   "needs": 1.6
+  },
+  {
+   "text": "CHAPTER 13 / 14",
+   "scene": "a_code",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "CHAPTER 14 / 14",
+   "scene": "a_recap",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "Bidirectional state space models (Hydra) mixed with attention.",
+   "scene": "a_recap",
+   "seconds": 4.5,
+   "needs": 5.3
+  }
+ ],
+ "text_too_small": [
+  {
+   "text": "frames × features",
+   "scene": "a_overview",
+   "px": 18
+  },
+  {
+   "text": "6 residual blocks",
+   "scene": "a_overview",
+   "px": 18
+  },
+  {
+   "text": "spectral + temporal",
+   "scene": "a_overview",
+   "px": 18
+  },
+  {
+   "text": "GAT, pool, HS-GAL ×2",
+   "scene": "a_overview",
+   "px": 18
+  },
+  {
+   "text": "max, mean → Linear",
+   "scene": "a_overview",
+   "px": 18
+  },
+  {
+   "text": "24 layers · hidden 1024",
+   "scene": "a_start",
+   "px": 18.72
+  },
+  {
+   "text": "SELU · BN · 1×1 conv 128→64",
+   "scene": "a_nodes",
+   "px": 17.28
+  },
+  {
+   "text": "→ BN → SELU (64 → 32)",
+   "scene": "a_hsgal",
+   "px": 18.72
+  },
+  {
+   "text": "32 → 32, + residual",
+   "scene": "a_branch",
+   "px": 18.72
+  },
+  {
+   "text": "ORIGINAL AASIST",
+   "scene": "a_orig",
+   "px": 15
+  }
+ ],
+ "dead_stretches": [
+  {
+   "scene": "a_intro",
+   "from": 40.5,
+   "seconds": 8.8
+  },
+  {
+   "scene": "a_overview",
+   "from": 52,
+   "seconds": 10.8
+  },
+  {
+   "scene": "a_overview",
+   "from": 66.25,
+   "seconds": 8.5
+  },
+  {
+   "scene": "a_overview",
+   "from": 75.5,
+   "seconds": 6.0
+  },
+  {
+   "scene": "a_overview",
+   "from": 82,
+   "seconds": 10.5
+  },
+  {
+   "scene": "a_overview",
+   "from": 93,
+   "seconds": 9.2
+  },
+  {
+   "scene": "a_overview",
+   "from": 103.25,
+   "seconds": 7.8
+  },
+  {
+   "scene": "a_overview",
+   "from": 112.5,
+   "seconds": 10.8
+  },
+  {
+   "scene": "a_start",
+   "from": 131,
+   "seconds": 9
+  },
+  {
+   "scene": "a_start",
+   "from": 169.5,
+   "seconds": 13.0
+  },
+  {
+   "scene": "a_start",
+   "from": 183,
+   "seconds": 14.2
+  },
+  {
+   "scene": "a_image",
+   "from": 206.25,
+   "seconds": 8.8
+  },
+  {
+   "scene": "a_image",
+   "from": 215.75,
+   "seconds": 9.2
+  },
+  {
+   "scene": "a_image",
+   "from": 244.5,
+   "seconds": 6.0
+  },
+  {
+   "scene": "a_image",
+   "from": 254.5,
+   "seconds": 9.8
+  },
+  {
+   "scene": "a_image",
+   "from": 267.25,
+   "seconds": 11.0
+  },
+  {
+   "scene": "a_image",
+   "from": 278.5,
+   "seconds": 9.5
+  },
+  {
+   "scene": "a_conv2d",
+   "from": 333,
+   "seconds": 15.2
+  },
+  {
+   "scene": "a_conv2d",
+   "from": 348.75,
+   "seconds": 6.5
+  },
+  {
+   "scene": "a_res",
+   "from": 366.5,
+   "seconds": 15.5
+  },
+  {
+   "scene": "a_res",
+   "from": 390.5,
+   "seconds": 6.0
+  },
+  {
+   "scene": "a_res",
+   "from": 406.25,
+   "seconds": 6.2
+  },
+  {
+   "scene": "a_res",
+   "from": 414.5,
+   "seconds": 6.0
+  },
+  {
+   "scene": "a_res",
+   "from": 427.5,
+   "seconds": 8.8
+  },
+  {
+   "scene": "a_nodes",
+   "from": 439.25,
+   "seconds": 18.5
+  },
+  {
+   "scene": "a_nodes",
+   "from": 464,
+   "seconds": 8.8
+  },
+  {
+   "scene": "a_nodes",
+   "from": 498,
+   "seconds": 7.5
+  },
+  {
+   "scene": "a_nodes",
+   "from": 510,
+   "seconds": 9.8
+  },
+  {
+   "scene": "a_gat",
+   "from": 524.25,
+   "seconds": 10.2
+  },
+  {
+   "scene": "a_gat",
+   "from": 535.25,
+   "seconds": 6.5
+  },
+  {
+   "scene": "a_gat",
+   "from": 542,
+   "seconds": 11.2
+  },
+  {
+   "scene": "a_gat",
+   "from": 579.5,
+   "seconds": 7.2
+  },
+  {
+   "scene": "a_gat",
+   "from": 587,
+   "seconds": 7.8
+  },
+  {
+   "scene": "a_gat",
+   "from": 595.75,
+   "seconds": 9.2
+  },
+  {
+   "scene": "a_pool",
+   "from": 610.5,
+   "seconds": 6.2
+  },
+  {
+   "scene": "a_pool",
+   "from": 628.25,
+   "seconds": 6.0
+  },
+  {
+   "scene": "a_pool",
+   "from": 635.25,
+   "seconds": 7.5
+  },
+  {
+   "scene": "a_hsgal",
+   "from": 645.75,
+   "seconds": 9.8
+  },
+  {
+   "scene": "a_hsgal",
+   "from": 663.5,
+   "seconds": 6.5
+  },
+  {
+   "scene": "a_hsgal",
+   "from": 703.5,
+   "seconds": 15.5
+  },
+  {
+   "scene": "a_branch",
+   "from": 725,
+   "seconds": 7.2
+  },
+  {
+   "scene": "a_branch",
+   "from": 758,
+   "seconds": 8.2
+  },
+  {
+   "scene": "a_readout",
+   "from": 772,
+   "seconds": 9.8
+  },
+  {
+   "scene": "a_readout",
+   "from": 801.25,
+   "seconds": 12.2
+  },
+  {
+   "scene": "a_readout",
+   "from": 813.75,
+   "seconds": 12.2
+  },
+  {
+   "scene": "a_orig",
+   "from": 831.25,
+   "seconds": 17.8
+  },
+  {
+   "scene": "a_orig",
+   "from": 852.5,
+   "seconds": 11.0
+  },
+  {
+   "scene": "a_orig",
+   "from": 877.25,
+   "seconds": 6.2
+  },
+  {
+   "scene": "a_orig",
+   "from": 887.25,
+   "seconds": 6.0
+  },
+  {
+   "scene": "a_orig",
+   "from": 893.5,
+   "seconds": 7.5
+  },
+  {
+   "scene": "a_code",
+   "from": 903,
+   "seconds": 19.5
+  },
+  {
+   "scene": "a_code",
+   "from": 936.75,
+   "seconds": 7.8
+  },
+  {
+   "scene": "a_recap",
+   "from": 998.75,
+   "seconds": 16.0
+  }
+ ],
+ "hectic_stretches": []
+}

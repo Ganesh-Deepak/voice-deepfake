@@ -1,0 +1,549 @@
+{
+ "video": "mambo",
+ "total_min": 16.95,
+ "scenes": [
+  {
+   "id": "m_intro",
+   "title": "Introduction",
+   "dur": 54.3,
+   "words": 116,
+   "wpm_overall": 128,
+   "wpm_speech": 160,
+   "beat_wpm": [
+    126,
+    123,
+    159
+   ],
+   "beats": 3
+  },
+  {
+   "id": "m_overview",
+   "title": "The big picture",
+   "dur": 89.2,
+   "words": 198,
+   "wpm_overall": 133,
+   "wpm_speech": 158,
+   "beat_wpm": [
+    136,
+    139,
+    153,
+    140,
+    132,
+    124
+   ],
+   "beats": 6
+  },
+  {
+   "id": "m_front",
+   "title": "Input and front-end",
+   "dur": 38.8,
+   "words": 89,
+   "wpm_overall": 138,
+   "wpm_speech": 170,
+   "beat_wpm": [
+    149,
+    147
+   ],
+   "beats": 2
+  },
+  {
+   "id": "m_inproj",
+   "title": "Input projection: Linear, RMSNorm, SiLU",
+   "dur": 50.2,
+   "words": 122,
+   "wpm_overall": 146,
+   "wpm_speech": 179,
+   "beat_wpm": [
+    153,
+    151,
+    158
+   ],
+   "beats": 3
+  },
+  {
+   "id": "m_stream",
+   "title": "Blocks and the residual stream",
+   "dur": 67.4,
+   "words": 159,
+   "wpm_overall": 142,
+   "wpm_speech": 165,
+   "beat_wpm": [
+    145,
+    143,
+    154
+   ],
+   "beats": 3
+  },
+  {
+   "id": "m_ssm",
+   "title": "State space models from scratch",
+   "dur": 140.5,
+   "words": 347,
+   "wpm_overall": 148,
+   "wpm_speech": 180,
+   "beat_wpm": [
+    154,
+    158,
+    146,
+    162,
+    141,
+    142,
+    155
+   ],
+   "beats": 7
+  },
+  {
+   "id": "m_hydra",
+   "title": "Hydra: looking both ways",
+   "dur": 63.0,
+   "words": 153,
+   "wpm_overall": 146,
+   "wpm_speech": 178,
+   "beat_wpm": [
+    153,
+    154,
+    146,
+    159
+   ],
+   "beats": 4
+  },
+  {
+   "id": "m_hshapes",
+   "title": "Inside one Hydra block",
+   "dur": 123.5,
+   "words": 309,
+   "wpm_overall": 150,
+   "wpm_speech": 181,
+   "beat_wpm": [
+    155,
+    144,
+    156,
+    161,
+    164,
+    162,
+    141
+   ],
+   "beats": 7
+  },
+  {
+   "id": "m_swiglu",
+   "title": "The SwiGLU feed-forward",
+   "dur": 43.7,
+   "words": 105,
+   "wpm_overall": 144,
+   "wpm_speech": 171,
+   "beat_wpm": [
+    159,
+    152
+   ],
+   "beats": 2
+  },
+  {
+   "id": "m_mha",
+   "title": "The attention block",
+   "dur": 82.7,
+   "words": 192,
+   "wpm_overall": 139,
+   "wpm_speech": 164,
+   "beat_wpm": [
+    133,
+    142,
+    157,
+    135
+   ],
+   "beats": 4
+  },
+  {
+   "id": "m_stack",
+   "title": "Five layers, thirty blocks",
+   "dur": 30.8,
+   "words": 66,
+   "wpm_overall": 129,
+   "wpm_speech": 163,
+   "beat_wpm": [
+    133,
+    149
+   ],
+   "beats": 2
+  },
+  {
+   "id": "m_pool",
+   "title": "Gated attention pooling",
+   "dur": 54.1,
+   "words": 132,
+   "wpm_overall": 146,
+   "wpm_speech": 179,
+   "beat_wpm": [
+    158,
+    156,
+    146
+   ],
+   "beats": 3
+  },
+  {
+   "id": "m_train",
+   "title": "Training",
+   "dur": 55.7,
+   "words": 133,
+   "wpm_overall": 143,
+   "wpm_speech": 171,
+   "beat_wpm": [
+    155,
+    147
+   ],
+   "beats": 2
+  },
+  {
+   "id": "m_code",
+   "title": "Checking it in code",
+   "dur": 44.8,
+   "words": 101,
+   "wpm_overall": 135,
+   "wpm_speech": 166,
+   "beat_wpm": [
+    153,
+    140,
+    142
+   ],
+   "beats": 3
+  },
+  {
+   "id": "m_recap",
+   "title": "Recap and comparison",
+   "dur": 77.9,
+   "words": 165,
+   "wpm_overall": 127,
+   "wpm_speech": 164,
+   "beat_wpm": [
+    54,
+    143,
+    130,
+    153
+   ],
+   "beats": 4
+  }
+ ],
+ "text_too_brief": [
+  {
+   "text": "CHAPTER 01 / 14",
+   "scene": "m_overview",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "CHAPTER 02 / 14",
+   "scene": "m_front",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "CHAPTER 03 / 14",
+   "scene": "m_inproj",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "projection:",
+   "scene": "m_inproj",
+   "seconds": 1.5,
+   "needs": 1.7
+  },
+  {
+   "text": "CHAPTER 04 / 14",
+   "scene": "m_stream",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "CHAPTER 05 / 14",
+   "scene": "m_ssm",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "big Δ: decay 0.20, the old state is mostly forgotten; this frame is written in s",
+   "scene": "m_ssm",
+   "seconds": 4.5,
+   "needs": 7.1
+  },
+  {
+   "text": "small Δ: decay 0.74, the memory is kept; the frame adds little",
+   "scene": "m_ssm",
+   "seconds": 5.0,
+   "needs": 5.3
+  },
+  {
+   "text": "one frame: (",
+   "scene": "m_ssm",
+   "seconds": 0.5,
+   "needs": 1.8
+  },
+  {
+   "text": "CHAPTER 06 / 14",
+   "scene": "m_hydra",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "CHAPTER 07 / 14",
+   "scene": "m_hshapes",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "y = forward + flip(backward): flipped back in time, then added",
+   "scene": "m_hshapes",
+   "seconds": 4.75,
+   "needs": 5.3
+  },
+  {
+   "text": "CHAPTER 08 / 14",
+   "scene": "m_swiglu",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "feed-forward",
+   "scene": "m_swiglu",
+   "seconds": 1.5,
+   "needs": 1.8
+  },
+  {
+   "text": "CHAPTER 09 / 14",
+   "scene": "m_mha",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "MHA block: 68,096 params  ·  Hydra block: 137,612  ·  SwiGLU block: 131,072",
+   "scene": "m_mha",
+   "seconds": 6.25,
+   "needs": 6.3
+  },
+  {
+   "text": "CHAPTER 10 / 14",
+   "scene": "m_stack",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "CHAPTER 11 / 14",
+   "scene": "m_pool",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "CHAPTER 12 / 14",
+   "scene": "m_train",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "CHAPTER 13 / 14",
+   "scene": "m_code",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "CHAPTER 14 / 14",
+   "scene": "m_recap",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "comparison",
+   "scene": "m_recap",
+   "seconds": 1.25,
+   "needs": 1.6
+  }
+ ],
+ "text_too_small": [],
+ "dead_stretches": [
+  {
+   "scene": "m_intro",
+   "from": 45.25,
+   "seconds": 8.8
+  },
+  {
+   "scene": "m_overview",
+   "from": 63.75,
+   "seconds": 7.5
+  },
+  {
+   "scene": "m_overview",
+   "from": 71.75,
+   "seconds": 9.2
+  },
+  {
+   "scene": "m_overview",
+   "from": 115.25,
+   "seconds": 10.0
+  },
+  {
+   "scene": "m_overview",
+   "from": 129.25,
+   "seconds": 14.0
+  },
+  {
+   "scene": "m_front",
+   "from": 168.75,
+   "seconds": 9.2
+  },
+  {
+   "scene": "m_inproj",
+   "from": 188.75,
+   "seconds": 9.0
+  },
+  {
+   "scene": "m_inproj",
+   "from": 214,
+   "seconds": 9.2
+  },
+  {
+   "scene": "m_inproj",
+   "from": 223.75,
+   "seconds": 8.5
+  },
+  {
+   "scene": "m_stream",
+   "from": 288.25,
+   "seconds": 11.5
+  },
+  {
+   "scene": "m_ssm",
+   "from": 312.75,
+   "seconds": 6.5
+  },
+  {
+   "scene": "m_ssm",
+   "from": 374,
+   "seconds": 6.2
+  },
+  {
+   "scene": "m_ssm",
+   "from": 383.75,
+   "seconds": 6.2
+  },
+  {
+   "scene": "m_ssm",
+   "from": 400.5,
+   "seconds": 7.0
+  },
+  {
+   "scene": "m_ssm",
+   "from": 413.5,
+   "seconds": 6.5
+  },
+  {
+   "scene": "m_ssm",
+   "from": 433.75,
+   "seconds": 6.5
+  },
+  {
+   "scene": "m_hydra",
+   "from": 443,
+   "seconds": 9
+  },
+  {
+   "scene": "m_hydra",
+   "from": 456.25,
+   "seconds": 6.5
+  },
+  {
+   "scene": "m_hydra",
+   "from": 496,
+   "seconds": 7.2
+  },
+  {
+   "scene": "m_hshapes",
+   "from": 565.25,
+   "seconds": 7.2
+  },
+  {
+   "scene": "m_hshapes",
+   "from": 581.25,
+   "seconds": 6.5
+  },
+  {
+   "scene": "m_hshapes",
+   "from": 596.75,
+   "seconds": 11.2
+  },
+  {
+   "scene": "m_hshapes",
+   "from": 619.75,
+   "seconds": 7.0
+  },
+  {
+   "scene": "m_swiglu",
+   "from": 635.25,
+   "seconds": 7.2
+  },
+  {
+   "scene": "m_mha",
+   "from": 678.75,
+   "seconds": 6.8
+  },
+  {
+   "scene": "m_mha",
+   "from": 691,
+   "seconds": 9
+  },
+  {
+   "scene": "m_mha",
+   "from": 724,
+   "seconds": 6
+  },
+  {
+   "scene": "m_mha",
+   "from": 732.5,
+   "seconds": 8.2
+  },
+  {
+   "scene": "m_pool",
+   "from": 799,
+   "seconds": 6.5
+  },
+  {
+   "scene": "m_pool",
+   "from": 806.25,
+   "seconds": 7.5
+  },
+  {
+   "scene": "m_pool",
+   "from": 831.25,
+   "seconds": 7.0
+  },
+  {
+   "scene": "m_train",
+   "from": 841,
+   "seconds": 13
+  },
+  {
+   "scene": "m_train",
+   "from": 872.25,
+   "seconds": 6.0
+  },
+  {
+   "scene": "m_train",
+   "from": 881.75,
+   "seconds": 7.0
+  },
+  {
+   "scene": "m_code",
+   "from": 929.25,
+   "seconds": 9.5
+  },
+  {
+   "scene": "m_recap",
+   "from": 979.75,
+   "seconds": 6.2
+  },
+  {
+   "scene": "m_recap",
+   "from": 999.25,
+   "seconds": 11.0
+  }
+ ],
+ "hectic_stretches": []
+}

@@ -224,7 +224,7 @@ const VIDEOS = [
   { id: 'aasist', n: 2, name: 'AASIST back-end', desc: 'Features as an image, two node sets, and heterogeneous graph attention.', files: ['scenes.js'], color: '#2dd4bf', color2: '#b78cff' },
   { id: 'mambo', n: 3, name: 'XLSR-MamBo', desc: 'Bidirectional state space models (Hydra) mixed with attention.', files: ['scenes.js'], color: '#f2cc60', color2: '#c792ea' },
 ];
-const RUNTIME = { xlsr: '31 min', aasist: '17 min', mambo: '16 min' };
+const RUNTIME = { xlsr: '31 min', aasist: '17 min', mambo: '17 min' };
 function loadScript(src) {
   return new Promise(res => { const el = document.createElement('script'); el.src = src; el.onload = res; el.onerror = res; document.head.appendChild(el); });
 }

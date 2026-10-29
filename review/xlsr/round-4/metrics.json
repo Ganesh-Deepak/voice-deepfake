@@ -1,0 +1,927 @@
+{
+ "video": "xlsr",
+ "total_min": 31.49,
+ "scenes": [
+  {
+   "id": "x_intro",
+   "title": "Introduction",
+   "dur": 62.2,
+   "words": 138,
+   "wpm_overall": 133,
+   "wpm_speech": 154,
+   "beat_wpm": [
+    147,
+    128,
+    142
+   ],
+   "beats": 3
+  },
+  {
+   "id": "overview",
+   "title": "The big picture",
+   "dur": 105.9,
+   "words": 249,
+   "wpm_overall": 141,
+   "wpm_speech": 169,
+   "beat_wpm": [
+    156,
+    136,
+    144,
+    145,
+    139,
+    147,
+    148
+   ],
+   "beats": 7
+  },
+  {
+   "id": "tensors",
+   "title": "Tensors and shapes",
+   "dur": 69.8,
+   "words": 163,
+   "wpm_overall": 140,
+   "wpm_speech": 188,
+   "beat_wpm": [
+    124,
+    155,
+    153,
+    158,
+    156,
+    119
+   ],
+   "beats": 6
+  },
+  {
+   "id": "audio",
+   "title": "Sound as numbers",
+   "dur": 91.4,
+   "words": 204,
+   "wpm_overall": 134,
+   "wpm_speech": 166,
+   "beat_wpm": [
+    150,
+    127,
+    130,
+    154,
+    138,
+    135
+   ],
+   "beats": 6
+  },
+  {
+   "id": "conv",
+   "title": "1-D convolution from scratch",
+   "dur": 147.8,
+   "words": 366,
+   "wpm_overall": 149,
+   "wpm_speech": 180,
+   "beat_wpm": [
+    132,
+    161,
+    158,
+    130,
+    153,
+    157,
+    145,
+    159
+   ],
+   "beats": 8
+  },
+  {
+   "id": "encoder",
+   "title": "The feature encoder: 7 convolutions",
+   "dur": 176.2,
+   "words": 402,
+   "wpm_overall": 137,
+   "wpm_speech": 164,
+   "beat_wpm": [
+    165,
+    134,
+    126,
+    71,
+    153,
+    148,
+    134,
+    137,
+    136,
+    154
+   ],
+   "beats": 10
+  },
+  {
+   "id": "projection",
+   "title": "Transpose, layer norm, linear projection",
+   "dur": 139.7,
+   "words": 336,
+   "wpm_overall": 144,
+   "wpm_speech": 172,
+   "beat_wpm": [
+    147,
+    140,
+    148,
+    159,
+    153,
+    133,
+    147
+   ],
+   "beats": 7
+  },
+  {
+   "id": "masking",
+   "title": "Masking (pre-training)",
+   "dur": 57.8,
+   "words": 136,
+   "wpm_overall": 141,
+   "wpm_speech": 178,
+   "beat_wpm": [
+    134,
+    155,
+    152,
+    147
+   ],
+   "beats": 4
+  },
+  {
+   "id": "posconv",
+   "title": "Positional convolution",
+   "dur": 119.4,
+   "words": 290,
+   "wpm_overall": 146,
+   "wpm_speech": 171,
+   "beat_wpm": [
+    148,
+    142,
+    150,
+    154,
+    147,
+    156
+   ],
+   "beats": 6
+  },
+  {
+   "id": "attn",
+   "title": "Self-attention from scratch",
+   "dur": 101.6,
+   "words": 249,
+   "wpm_overall": 147,
+   "wpm_speech": 192,
+   "beat_wpm": [
+    138,
+    161,
+    145,
+    160,
+    155,
+    154,
+    143
+   ],
+   "beats": 7
+  },
+  {
+   "id": "mha",
+   "title": "Multi-head attention with real shapes",
+   "dur": 136.7,
+   "words": 305,
+   "wpm_overall": 134,
+   "wpm_speech": 162,
+   "beat_wpm": [
+    150,
+    135,
+    128,
+    136,
+    124,
+    126,
+    134,
+    143,
+    159
+   ],
+   "beats": 9
+  },
+  {
+   "id": "x_layer",
+   "title": "One transformer layer (pre-norm)",
+   "dur": 102.6,
+   "words": 237,
+   "wpm_overall": 139,
+   "wpm_speech": 164,
+   "beat_wpm": [
+    148,
+    136,
+    146,
+    140,
+    142,
+    141
+   ],
+   "beats": 6
+  },
+  {
+   "id": "outputs",
+   "title": "What comes out",
+   "dur": 85.7,
+   "words": 204,
+   "wpm_overall": 143,
+   "wpm_speech": 167,
+   "beat_wpm": [
+    141,
+    159,
+    140,
+    156
+   ],
+   "beats": 4
+  },
+  {
+   "id": "code",
+   "title": "Checking it in code",
+   "dur": 70.4,
+   "words": 165,
+   "wpm_overall": 141,
+   "wpm_speech": 166,
+   "beat_wpm": [
+    138,
+    146,
+    152
+   ],
+   "beats": 3
+  },
+  {
+   "id": "quant",
+   "title": "Pre-training: the quantizer",
+   "dur": 99.2,
+   "words": 230,
+   "wpm_overall": 139,
+   "wpm_speech": 167,
+   "beat_wpm": [
+    138,
+    141,
+    138,
+    158,
+    150,
+    140,
+    136
+   ],
+   "beats": 7
+  },
+  {
+   "id": "contrast",
+   "title": "Pre-training: the contrastive task",
+   "dur": 87.0,
+   "words": 200,
+   "wpm_overall": 138,
+   "wpm_speech": 166,
+   "beat_wpm": [
+    126,
+    151,
+    128,
+    151,
+    149,
+    144
+   ],
+   "beats": 6
+  },
+  {
+   "id": "deepfake",
+   "title": "Using it for deepfake detection",
+   "dur": 142.0,
+   "words": 336,
+   "wpm_overall": 142,
+   "wpm_speech": 163,
+   "beat_wpm": [
+    124,
+    148,
+    147,
+    146,
+    138,
+    154
+   ],
+   "beats": 6
+  },
+  {
+   "id": "recap",
+   "title": "Recap: the whole flow",
+   "dur": 94.1,
+   "words": 199,
+   "wpm_overall": 127,
+   "wpm_speech": 161,
+   "beat_wpm": [
+    135,
+    138,
+    131,
+    145,
+    143
+   ],
+   "beats": 5
+  }
+ ],
+ "text_too_brief": [
+  {
+   "text": "CHAPTER 01 / 17",
+   "scene": "overview",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "CHAPTER 02 / 17",
+   "scene": "tensors",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "CHAPTER 03 / 17",
+   "scene": "audio",
+   "seconds": 0.75,
+   "needs": 2.0
+  },
+  {
+   "text": "CHAPTER 04 / 17",
+   "scene": "conv",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "−0.3×(1)  +  −0.8×(0)  +  −0.2×(−1)  =",
+   "scene": "conv",
+   "seconds": 3.5,
+   "needs": 3.6
+  },
+  {
+   "text": "CHAPTER 05 / 17",
+   "scene": "encoder",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "convolutions",
+   "scene": "encoder",
+   "seconds": 1.5,
+   "needs": 1.8
+  },
+  {
+   "text": "CHAPTER 06 / 17",
+   "scene": "projection",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "CHAPTER 07 / 17",
+   "scene": "masking",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "(pre-training)",
+   "scene": "masking",
+   "seconds": 1.25,
+   "needs": 1.9
+  },
+  {
+   "text": "CHAPTER 08 / 17",
+   "scene": "posconv",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "CHAPTER 09 / 17",
+   "scene": "attn",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "CHAPTER 10 / 17",
+   "scene": "mha",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "CHAPTER 11 / 17",
+   "scene": "x_layer",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "(pre-norm)",
+   "scene": "x_layer",
+   "seconds": 1.25,
+   "needs": 1.6
+  },
+  {
+   "text": "pre-norm: LN before each part",
+   "scene": "x_layer",
+   "seconds": 2.5,
+   "needs": 3.0
+  },
+  {
+   "text": "CHAPTER 12 / 17",
+   "scene": "outputs",
+   "seconds": 0.75,
+   "needs": 2.0
+  },
+  {
+   "text": "CHAPTER 13 / 17",
+   "scene": "code",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "CHAPTER 14 / 17",
+   "scene": "quant",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "no labels: the targets come from the audio itself",
+   "scene": "quant",
+   "seconds": 4.25,
+   "needs": 4.4
+  },
+  {
+   "text": "CHAPTER 15 / 17",
+   "scene": "contrast",
+   "seconds": 0.75,
+   "needs": 2.0
+  },
+  {
+   "text": "contrastive",
+   "scene": "contrast",
+   "seconds": 1.25,
+   "needs": 1.7
+  },
+  {
+   "text": "CHAPTER 16 / 17",
+   "scene": "deepfake",
+   "seconds": 0.75,
+   "needs": 2.0
+  },
+  {
+   "text": "CHAPTER 17 / 17",
+   "scene": "recap",
+   "seconds": 1.0,
+   "needs": 2.0
+  },
+  {
+   "text": "The 201 frames become an image, two node sets, and a graph.",
+   "scene": "recap",
+   "seconds": 4.25,
+   "needs": 5.1
+  },
+  {
+   "text": "ganesh-deepak.github.io/voice-deepfake",
+   "scene": "recap",
+   "seconds": 3.5,
+   "needs": 3.6
+  }
+ ],
+ "text_too_small": [
+  {
+   "text": "400 samples = 25 ms",
+   "scene": "encoder",
+   "px": 18
+  },
+  {
+   "text": "1024 → 1024 channels",
+   "scene": "posconv",
+   "px": 18.72
+  },
+  {
+   "text": "QUANTIZER BRANCH",
+   "scene": "quant",
+   "px": 15
+  },
+  {
+   "text": "temperature τ annealed",
+   "scene": "quant",
+   "px": 18
+  },
+  {
+   "text": "C = PROJECT_HID(H)",
+   "scene": "contrast",
+   "px": 15
+  },
+  {
+   "text": "24 layers · 1024",
+   "scene": "deepfake",
+   "px": 18.72
+  },
+  {
+   "text": "graph attention → score",
+   "scene": "deepfake",
+   "px": 18.72
+  }
+ ],
+ "dead_stretches": [
+  {
+   "scene": "x_intro",
+   "from": 11.75,
+   "seconds": 8.2
+  },
+  {
+   "scene": "overview",
+   "from": 65,
+   "seconds": 11
+  },
+  {
+   "scene": "overview",
+   "from": 77,
+   "seconds": 7.5
+  },
+  {
+   "scene": "overview",
+   "from": 84.75,
+   "seconds": 12.5
+  },
+  {
+   "scene": "overview",
+   "from": 98,
+   "seconds": 6.8
+  },
+  {
+   "scene": "overview",
+   "from": 105.5,
+   "seconds": 8.2
+  },
+  {
+   "scene": "overview",
+   "from": 159,
+   "seconds": 9
+  },
+  {
+   "scene": "tensors",
+   "from": 169.75,
+   "seconds": 6.0
+  },
+  {
+   "scene": "tensors",
+   "from": 176,
+   "seconds": 6.5
+  },
+  {
+   "scene": "tensors",
+   "from": 183.25,
+   "seconds": 6.8
+  },
+  {
+   "scene": "tensors",
+   "from": 229,
+   "seconds": 8.8
+  },
+  {
+   "scene": "audio",
+   "from": 242,
+   "seconds": 6.8
+  },
+  {
+   "scene": "audio",
+   "from": 249,
+   "seconds": 13
+  },
+  {
+   "scene": "audio",
+   "from": 266.5,
+   "seconds": 8.0
+  },
+  {
+   "scene": "audio",
+   "from": 302.75,
+   "seconds": 7.0
+  },
+  {
+   "scene": "audio",
+   "from": 311.5,
+   "seconds": 6.0
+  },
+  {
+   "scene": "audio",
+   "from": 318.25,
+   "seconds": 10.8
+  },
+  {
+   "scene": "conv",
+   "from": 335.25,
+   "seconds": 6.2
+  },
+  {
+   "scene": "conv",
+   "from": 343,
+   "seconds": 8.5
+  },
+  {
+   "scene": "conv",
+   "from": 353.5,
+   "seconds": 8.2
+  },
+  {
+   "scene": "conv",
+   "from": 382.25,
+   "seconds": 7.5
+  },
+  {
+   "scene": "conv",
+   "from": 400,
+   "seconds": 7.8
+  },
+  {
+   "scene": "conv",
+   "from": 414.75,
+   "seconds": 7.5
+  },
+  {
+   "scene": "conv",
+   "from": 422.75,
+   "seconds": 6.5
+  },
+  {
+   "scene": "conv",
+   "from": 429.5,
+   "seconds": 7.8
+  },
+  {
+   "scene": "conv",
+   "from": 437.5,
+   "seconds": 6.2
+  },
+  {
+   "scene": "conv",
+   "from": 462.5,
+   "seconds": 14.2
+  },
+  {
+   "scene": "encoder",
+   "from": 488,
+   "seconds": 13.2
+  },
+  {
+   "scene": "encoder",
+   "from": 533.5,
+   "seconds": 11.2
+  },
+  {
+   "scene": "encoder",
+   "from": 557.5,
+   "seconds": 9.2
+  },
+  {
+   "scene": "encoder",
+   "from": 577.25,
+   "seconds": 6.0
+  },
+  {
+   "scene": "encoder",
+   "from": 589.5,
+   "seconds": 8.2
+  },
+  {
+   "scene": "encoder",
+   "from": 598,
+   "seconds": 8.8
+  },
+  {
+   "scene": "encoder",
+   "from": 622.5,
+   "seconds": 12.2
+  },
+  {
+   "scene": "encoder",
+   "from": 635.5,
+   "seconds": 6.2
+  },
+  {
+   "scene": "encoder",
+   "from": 642,
+   "seconds": 11
+  },
+  {
+   "scene": "projection",
+   "from": 665.75,
+   "seconds": 9.5
+  },
+  {
+   "scene": "projection",
+   "from": 676.25,
+   "seconds": 9.0
+  },
+  {
+   "scene": "projection",
+   "from": 734,
+   "seconds": 9
+  },
+  {
+   "scene": "projection",
+   "from": 743.25,
+   "seconds": 8.8
+  },
+  {
+   "scene": "projection",
+   "from": 763.75,
+   "seconds": 6.8
+  },
+  {
+   "scene": "projection",
+   "from": 780.75,
+   "seconds": 12.0
+  },
+  {
+   "scene": "masking",
+   "from": 795.75,
+   "seconds": 8.5
+  },
+  {
+   "scene": "masking",
+   "from": 840,
+   "seconds": 6.8
+  },
+  {
+   "scene": "posconv",
+   "from": 874.25,
+   "seconds": 9.2
+  },
+  {
+   "scene": "posconv",
+   "from": 915,
+   "seconds": 6
+  },
+  {
+   "scene": "posconv",
+   "from": 924.5,
+   "seconds": 6.5
+  },
+  {
+   "scene": "posconv",
+   "from": 942.25,
+   "seconds": 9.5
+  },
+  {
+   "scene": "posconv",
+   "from": 958.25,
+   "seconds": 11.8
+  },
+  {
+   "scene": "attn",
+   "from": 973,
+   "seconds": 9.2
+  },
+  {
+   "scene": "attn",
+   "from": 1046.75,
+   "seconds": 6.8
+  },
+  {
+   "scene": "attn",
+   "from": 1065.25,
+   "seconds": 6.2
+  },
+  {
+   "scene": "mha",
+   "from": 1074.5,
+   "seconds": 7.2
+  },
+  {
+   "scene": "mha",
+   "from": 1084,
+   "seconds": 7.2
+  },
+  {
+   "scene": "mha",
+   "from": 1163.75,
+   "seconds": 7.8
+  },
+  {
+   "scene": "mha",
+   "from": 1194.75,
+   "seconds": 13.5
+  },
+  {
+   "scene": "x_layer",
+   "from": 1243.25,
+   "seconds": 6.5
+  },
+  {
+   "scene": "x_layer",
+   "from": 1277.75,
+   "seconds": 14.2
+  },
+  {
+   "scene": "x_layer",
+   "from": 1298.5,
+   "seconds": 12.5
+  },
+  {
+   "scene": "outputs",
+   "from": 1319,
+   "seconds": 12
+  },
+  {
+   "scene": "outputs",
+   "from": 1384,
+   "seconds": 12.5
+  },
+  {
+   "scene": "code",
+   "from": 1408.75,
+   "seconds": 8.2
+  },
+  {
+   "scene": "code",
+   "from": 1452.25,
+   "seconds": 14.8
+  },
+  {
+   "scene": "quant",
+   "from": 1484.5,
+   "seconds": 8.8
+  },
+  {
+   "scene": "quant",
+   "from": 1497.25,
+   "seconds": 10.2
+  },
+  {
+   "scene": "quant",
+   "from": 1508.5,
+   "seconds": 16.5
+  },
+  {
+   "scene": "quant",
+   "from": 1545.25,
+   "seconds": 7.2
+  },
+  {
+   "scene": "quant",
+   "from": 1557.25,
+   "seconds": 9.0
+  },
+  {
+   "scene": "contrast",
+   "from": 1569.25,
+   "seconds": 13.0
+  },
+  {
+   "scene": "contrast",
+   "from": 1583,
+   "seconds": 7.2
+  },
+  {
+   "scene": "contrast",
+   "from": 1596.5,
+   "seconds": 6.2
+  },
+  {
+   "scene": "contrast",
+   "from": 1645.75,
+   "seconds": 7.5
+  },
+  {
+   "scene": "deepfake",
+   "from": 1656.25,
+   "seconds": 8.5
+  },
+  {
+   "scene": "deepfake",
+   "from": 1671.25,
+   "seconds": 9.0
+  },
+  {
+   "scene": "deepfake",
+   "from": 1680.75,
+   "seconds": 11.0
+  },
+  {
+   "scene": "deepfake",
+   "from": 1694,
+   "seconds": 10
+  },
+  {
+   "scene": "deepfake",
+   "from": 1708.75,
+   "seconds": 7.2
+  },
+  {
+   "scene": "deepfake",
+   "from": 1731.5,
+   "seconds": 6.8
+  },
+  {
+   "scene": "deepfake",
+   "from": 1747.75,
+   "seconds": 10.2
+  },
+  {
+   "scene": "deepfake",
+   "from": 1758.25,
+   "seconds": 7.8
+  },
+  {
+   "scene": "deepfake",
+   "from": 1773,
+   "seconds": 6.8
+  },
+  {
+   "scene": "recap",
+   "from": 1804.75,
+   "seconds": 10.8
+  },
+  {
+   "scene": "recap",
+   "from": 1876,
+   "seconds": 8
+  }
+ ],
+ "hectic_stretches": []
+}

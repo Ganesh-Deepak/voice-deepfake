@@ -16,7 +16,7 @@
       "Stack them, and you have a four-dimensional tensor: twenty-five, by B, by forty-nine, by one thousand and twenty-four. Different layers hold different kinds of information. Lower layers stay closer to the acoustics, while higher layers become more abstract and linguistic. For deepfake detection, layer-by-layer studies find the lower and middle layers the most useful, which is why many detectors learn a weighted combination of all the layers.",
       "Adding everything up: about four point two million weights in the feature encoder, half a million in the projection, eight point four million in the positional convolution, and three hundred and two million in the twenty-four transformer layers. Roughly three hundred and fifteen million in total. The three hundred million in the name is rounded.",
     ],
-    hud: S => ({ stage: 6, shape: S.b === 2 ? '({M:25}, {B:B}, {T:49}, {C:1024})' : '({B:B}, {T:49}, {C:1024})' }),
+    hud: S => ({ stage: 6, shape: S.b === 2 ? '({L:25}, {B:B}, {T:49}, {C:1024})' : '({B:B}, {T:49}, {C:1024})' }),
     draw(ctx, S) {
       const A = S.vis(0, 1);
       if (A > 0) {
@@ -33,8 +33,11 @@
       if (Bv > 0) {
         ctx.save(); ctx.globalAlpha = Bv;
         const n = 25, dx = 36, dy = 15;
+        // the request shows first; the 25 slabs fan out when the voice says "twenty-five tensors"
+        mtxt(ctx, 'out = model(x, output_hidden_states=True)', 1510, 530, { size: 26, mono: true, align: 'center', alpha: S.p(1, 0.6, 0.3) * (1 - S.p(2, 0.5, 0)) });
+        const slabT = i => S.st(1, 1) + 0.6 + i * 0.12;
         for (let i = n - 1; i >= 0; i--) {
-          const a = S.p(1, 0.3, 2 + i * 0.3);
+          const a = S.p(1, 0.3, slabT(i));
           if (a <= 0) continue;
           ctx.globalAlpha = Bv * a;
           const x = 180 + i * dx, y = 560 - i * dy;
@@ -45,7 +48,7 @@
         }
         // the other slabs are hidden behind their neighbours, so h12 and h24 get tags above their top edge
         [[12, 'h₁₂'], [24, 'h₂₄']].forEach(([i, lab]) => {
-          const a = S.p(1, 0.3, 2 + i * 0.3);
+          const a = S.p(1, 0.3, slabT(i));
           if (a <= 0) return;
           const c = E.mix('#58a6ff', '#d2a8ff', i / 24);
           chip(ctx, 180 + i * dx + 100, 560 - i * dy - 26, lab, { size: 22, align: 'center', color: c, stroke: c, fill: COL.bg2, alpha: Bv * a });
@@ -60,11 +63,11 @@
         if (b2 > 0) {
           ctx.globalAlpha = Bv * b2;
           mtxt(ctx, 'torch.stack(hidden_states)', 1510, 670, { size: 26, mono: true, align: 'center' });
-          mtxt(ctx, '→ ({M:25}, {B:B}, {T:49}, {C:1024})', 1510, 715, { size: 28, mono: true, align: 'center' });
+          mtxt(ctx, '→ ({L:25}, {B:B}, {T:49}, {C:1024})', 1510, 715, { size: 28, mono: true, align: 'center' });
           arrow(ctx, 1260, 330, 1260 + 480, 330, { color: COL.dim });
           txt(ctx, 'acoustic', 1260, 310, { size: 24, weight: 700, color: COL.T });
           txt(ctx, 'abstract / linguistic', 1740, 310, { size: 24, weight: 700, color: COL.H, align: 'right' });
-          const sp = S.p(2, 0.8, 11);
+          const sp = S.ps(2, 3, 0.8);
           ctx.globalAlpha = Bv * sp;
           rrect(ctx, 1200, 420, 620, 170, 14, COL.panel, rgba(COL.K, 0.6), 2);
           wrap(ctx, 'Deepfake detection: layer-wise studies find the lower and middle layers most useful → learn a weighted sum over all 25.', 1225, 470, 580, 38, { size: 26 });
@@ -90,6 +93,7 @@
         });
         ctx.globalAlpha = Cv * S.p(3, 0.6, 9);
         txt(ctx, 'total = 315,438,720  (the “300M” is rounded)', W / 2, 760, { size: 40, weight: 800, align: 'center' });
+        txt(ctx, 'the bars leave out 3,072: the final LayerNorm (2,048) and the mask vector (1,024)', W / 2, 810, { size: 22, align: 'center', color: COL.dim, alpha: S.p(3, 0.6, 10) });
         ctx.restore();
       }
     },
@@ -124,7 +128,7 @@
       last = re.lastIndex;
     }
     parts.push([code.slice(last), COL.text]);
-    if (com) parts.push([com, /Size|\d{2}/.test(com) ? COL.B : COL.faint]);
+    if (com) parts.push([com, /Size|\d{2}/.test(com) ? COL.B : COL.dim]);
     E.rich(ctx, parts, x, y, { size: 27, mono: true, alpha: a });
   }
   S_.push({
@@ -136,8 +140,10 @@
     ],
     hud: { stage: 6, shape: '({B:2}, {T:49}, {C:1024})' },
     draw(ctx, S) {
+      ctx.save(); ctx.globalAlpha *= S.p(0, 0.6, 0.9);
       rrect(ctx, 150, 180, 1620, 720, 18, '#0d1320', COL.line, 2);
       ['#ff5f57', '#febc2e', '#28c840'].forEach((c, i) => { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(190 + i * 30, 215, 8, 0, 7); ctx.fill(); });
+      ctx.restore();
       // each line appears on the sentence that reads it; the newest line is highlighted
       const LS = [[0, 0, 0.3], [0, 0, 1.2], [0, 1, 0.3], [0, 1, 3], [0, 1, 5], [1, 0, 0], [1, 1, 0], [1, 2, 0], [1, 3, 0], [2, 0, 0], [2, 1, 0], [2, 2, 0], [2, 3, 0]];
       let cur = -1;
@@ -147,6 +153,8 @@
         const a = S.p(bb, 0.4, S.st(bb, j) + d);
         if (i === cur && a > 0) rrect(ctx, 180, 280 + i * 50 - 34, 1560, 46, 8, rgba(E.THEME.a, 0.12 * a), rgba(E.THEME.a, 0.5 * a), 1.5);
         codeLine(ctx, s, 200, 280 + i * 50, a * (i === cur || cur < 0 ? 1 : 0.62));
+        const ok = S.ps(2, 4, 0.4, 0.3 + i * 0.15);
+        if (ok > 0 && /#.*\(|# 315/.test(s)) txt(ctx, '✓', 1730, 280 + i * 50, { size: 26, weight: 800, color: COL.B, alpha: ok });
       });
     },
   });
@@ -164,7 +172,7 @@
       "The two chosen entries, three hundred and eighty-four numbers each, are concatenated into a vector of seven hundred and sixty-eight, and passed through one more linear layer. The quantized targets are B by forty-nine by seven sixty-eight.",
       "Two codebooks of three hundred and twenty give three hundred and twenty squared: over one hundred thousand possible units. That's product quantization: a big vocabulary built from two small ones.",
     ],
-    hud: S => ({ stage: 1, label: 'quantizer branch', shape: ['({B:B}, {T:49}, {C:512})', '({B:B}, {T:49}, {C:512})', '({B:B}, {T:49}, {C:512})', '({B:B}, {T:49}, {M:2}, {M:320})', '({B:B}, {T:49}, {M:2}, {M:320})', '({B:B}, {T:49}, {C:768})', '({B:B}, {T:49}, {C:768})'][S.b] }),
+    hud: S => ({ stage: 1, stageName: 'Pre-training branch', label: 'quantizer', shape: S.b === 3 ? (S.past(3, 1) ? '({B:B}, {T:49}, {M:2}, {M:320})' : '({B:B}, {T:49}, 640)') : ['({B:B}, {T:49}, {C:512})', '({B:B}, {T:49}, {C:512})', '({B:B}, {T:49}, {C:512})', '', '({B:B}, {T:49}, {M:2}, {M:320})', '({B:B}, {T:49}, {C:768})', '({B:B}, {T:49}, {C:768})'][S.b] }),
     draw(ctx, S) {
       // beat 0: the idea before the machinery: the model makes its own targets. In beat 1 the three
       // boxes shrink into a road map along the top, and the active stage stays lit.
@@ -205,7 +213,7 @@
         ctx.restore();
         if (sel != null) rrect(ctx, x - 6, 280 + sel * 11 - 3, 122, 17, 4, null, COL.K, 3);
       };
-      const pick = S.p(4, 0.6, 2.5);
+      const pick = S.ps(4, 0, 0.6, 0.4);
       const sel = [13, 27];
       ctx.save(); ctx.globalAlpha = a2;
       cb(1060, 0, pick > 0 ? sel[0] : null); cb(1220, 1, pick > 0 ? sel[1] : null);
@@ -217,17 +225,20 @@
         arrow(ctx, 300, 518, 360, 518, {});
         box(ctx, 370, 458, 170, 120, ['Linear', '512 → 640'], { size: 28, color: COL.K });
         arrow(ctx, 550, 518, 600, 518, {});
-        const lg = (y, g) => {
+        // one strip of 640 scores, then (on "reshape") two rows of 320: one per codebook
+        const rs = easeIO(S.l(3, 0.9, S.st(3, 1) + 0.3));
+        const lg = (g) => {
           const n = 40;
           for (let k = 0; k < n; k++) {
             const v = 0.3 + 0.35 * noise(k, g, 200) + (k === Math.round(sel[g] / 40 * n) ? 0.6 : 0);
-            const hh = Math.max(4, v * 80);
-            ctx.fillStyle = k === Math.round(sel[g] / 40 * n) && pick > 0 ? COL.K : rgba(COL.M, 0.7);
-            ctx.fillRect(620 + k * 9.5, y - hh, 7, hh);
+            const hh = Math.max(4, v * 80), x = lerp(620 + (g * n + k) * 4.75, 620 + k * 9.5, rs), y = lerp(470, 470 + g * 170, rs);
+            ctx.fillStyle = k === Math.round(sel[g] / 40 * n) && pick > 0 ? COL.K : rgba(g ? COL.H : COL.M, 0.7);
+            ctx.fillRect(x, y - hh, lerp(3.5, 7, rs), hh);
           }
-          txt(ctx, `group ${g + 1}: 320 scores`, 620, y + 30, { size: 20, color: COL.dim, weight: 600 });
+          if (rs > 0.5) txt(ctx, `group ${g + 1}: 320 scores`, 620, 470 + g * 170 + 30, { size: 22, color: COL.dim, weight: 600, alpha: (rs - 0.5) * 2 });
         };
-        lg(470, 0); lg(640, 1);
+        lg(0); lg(1);
+        if (rs < 0.5) txt(ctx, '640 scores per frame', 620, 500, { size: 22, color: COL.dim, weight: 600, alpha: 1 - rs * 2 });
         mtxt(ctx, 'reshape → ({B:B}, {T:49}, {M:2}, {M:320})', 810, 730, { size: 24, mono: true, align: 'center', alpha: S.ps(3, 1) });
         txt(ctx, 'for one frame', 810, 330, { size: 22, color: COL.dim, align: 'center' });
         if (pick > 0) {
@@ -241,7 +252,7 @@
       const g4 = S.vis(4, 5) * S.ps(4, 1);
       if (g4 > 0) {
         const s1 = S.st(4, 1), span = S.bd(4) - s1;
-        const fw = S.p(4, 0.6, s1 + 0.35 * span), bw = S.p(4, 0.6, s1 + 0.6 * span);
+        const fw = S.p(4, 0.6, s1 + 0.2), bw = S.p(4, 0.6, s1 + 0.5 * span);
         ctx.save(); ctx.globalAlpha = g4;
         XL.card(ctx, 1380, 280, 460, 540, 1);
         txt(ctx, 'Gumbel softmax', 1610, 330, { size: 28, weight: 800, align: 'center', color: COL.K });
@@ -319,6 +330,15 @@
         cells(ctx, 150, 220, 24, 1, 40, 16, r => vcol(noise(r, 1, 230), 0.9), 2);
         dimLeft(ctx, 144, 220, 384, '{C:1024}', COL.C, 22);
         txt(ctx, 'transformer out @ t', 170, 640, { size: 22, color: COL.dim, align: 'center', alpha: 1 - S.p(4, 0.5) });
+        const ms = S.ps(0, 1, 0.6) * (1 - S.p(3, 0.5));
+        if (ms > 0) {
+          ctx.save(); ctx.globalAlpha = A * ms;
+          for (let f = 0; f < 49; f++) rrect(ctx, 150 + f * 18, 720, 15, 30, 3, f >= 20 && f < 30 ? rgba(COL.M, 0.6) : rgba(COL.T, 0.35), f === 24 ? COL.K : null, 2);
+          txt(ctx, 'masked span', 150 + 25 * 18, 780, { size: 22, weight: 700, align: 'center', color: COL.M });
+          txt(ctx, 't', 150 + 24.4 * 18, 708, { size: 26, weight: 800, align: 'center', color: COL.K });
+          parrow(ctx, [[150 + 24.4 * 18, 690], [150 + 24.4 * 18, 660], [200, 660], [200, 612]], { color: COL.K, lw: 2 });
+          ctx.restore();
+        }
         arrow(ctx, 200, 412, 270, 412, {});
         box(ctx, 280, 362, 130, 100, ['Linear', '1024→768'], { size: 22, color: COL.K });
         arrow(ctx, 420, 412, 480, 412, {});
@@ -326,10 +346,17 @@
         txt(ctx, 'c', 510, 560, { size: 40, weight: 800, align: 'center', color: COL.H });
         txt(ctx, 't', 530, 570, { size: 24, weight: 700, color: COL.H });
         // lineup
-        const la = S.p(1);
+        const la = S.p(1), slots = S.ps(1, 1, 0.6, 0.6);
         for (let i = 0; i < CAND; i++) {
           const isT = i === TRUE_I;
           const a = isT ? la : S.p(2, 0.4, 0.5 + i * 0.25);
+          // "a lineup": the empty places appear when the voice says it, and fill with distractors in the next beat
+          if (!isT && slots * (1 - a) > 0) {
+            ctx.save(); ctx.globalAlpha = A * slots * (1 - a); ctx.setLineDash([8, 8]);
+            rrect(ctx, 650 + i * 96 - 6, 280, 60, 260, 8, null, COL.faint, 2);
+            ctx.restore();
+            txt(ctx, '?', 650 + i * 96 + 24, 425, { size: 34, weight: 700, align: 'center', color: COL.faint, alpha: A * slots * (1 - a) });
+          }
           if (a <= 0) continue;
           ctx.globalAlpha = A * a;
           const x = 650 + i * 96;
@@ -354,7 +381,22 @@
           }
           ctx.globalAlpha = A * s3;
           txt(ctx, S.l(3, 1, 6) > 0.5 ? 'softmax(sim / κ)' : 'cos-sim(c_t, q)', 660, 700, { size: 22, color: COL.dim, align: 'right' });
+          // cosine similarity as a picture: the angle between two arrows, whatever their lengths
+          const cs = (1 - S.p(3, 0.5, 8.5)) * S.p(3, 0.6, 0.6);
+          if (cs > 0) {
+            ctx.globalAlpha = A * s3 * cs;
+            const ox = 170, oy = 960, th1 = -0.55, th2 = -0.2;
+            arrow(ctx, ox, oy, ox + 230 * Math.cos(th1), oy + 230 * Math.sin(th1), { color: COL.H, lw: 4 });
+            arrow(ctx, ox, oy, ox + 160 * Math.cos(th2), oy + 160 * Math.sin(th2), { color: COL.B, lw: 4 });
+            ctx.strokeStyle = COL.K; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(ox, oy, 70, th1, th2); ctx.stroke();
+            txt(ctx, 'θ', ox + 86, oy - 26, { size: 26, weight: 700, color: COL.K });
+            txt(ctx, 'c', ox + 238 * Math.cos(th1) + 6, oy + 238 * Math.sin(th1), { size: 26, weight: 800, color: COL.H });
+            txt(ctx, 'q', ox + 168 * Math.cos(th2) + 8, oy + 168 * Math.sin(th2) + 8, { size: 26, weight: 800, color: COL.B });
+            mtxt(ctx, 'cos θ = c·q / (‖c‖ ‖q‖)', 470, 880, { size: 28, mono: true, align: 'left' });
+            txt(ctx, '1 = same direction, 0 = unrelated', 470, 924, { size: 22, color: COL.dim });
+          }
           mtxt(ctx, 'L = − log  exp(sim(c,q_t)/κ) / Σ exp(sim(c,q̃)/κ)        κ = 0.1', W / 2, 880, { size: 30, mono: true, align: 'center', alpha: S.p(3, 0.6, 9) });
+          txt(ctx, 'dividing by a small κ = 0.1 makes the softmax sharp: the best match takes most of the weight', W / 2, 930, { size: 22, align: 'center', color: COL.dim, alpha: S.p(3, 0.6, 7) });
         }
         ctx.restore();
       }
@@ -363,13 +405,15 @@
         ctx.save(); ctx.globalAlpha = D;
         rrect(ctx, 100, 640, 1720, 290, 16, 'rgba(10,14,22,0.97)', COL.line, 2);
         wrap(ctx, 'To pick the right q_t, the model must infer what the hidden audio sounds like from context → it learns phonemes, speakers, rhythm.', 140, 700, 1000, 42, { size: 28 });
-        mtxt(ctx, 'L = L_contrastive + {K:0.1} · L_diversity', 140, 880, { size: 32, mono: true, alpha: S.p(4, 0.6, 9) });
-        const u = easeIO(S.l(4, 2, 12));
+        mtxt(ctx, 'L = L_contrastive + {K:0.1} · L_diversity', 140, 880, { size: 32, mono: true, alpha: S.ps(4, 2, 0.6) });
+        const hg = S.ps(4, 2, 0.6, 0.4);
+        ctx.globalAlpha = D * hg;
+        const u = easeIO(S.l(4, 2, S.st(4, 2) + 1.5));
         for (let k = 0; k < 24; k++) {
           const v = lerp(0.1 + 0.9 * Math.pow(Math.abs(noise(k, 1, 240)), 3), 0.55, u);
           rrect(ctx, 1240 + k * 22, 900 - v * 180, 16, v * 180, 3, rgba(COL.M, 0.8), null);
         }
-        txt(ctx, 'codebook usage → uniform', 1500, 690, { size: 22, color: COL.M, align: 'center', weight: 700, alpha: S.p(4, 0.6, 12) });
+        txt(ctx, u > 0.5 ? 'codebook usage → uniform' : 'codebook usage', 1500, 690, { size: 22, color: COL.M, align: 'center', weight: 700 });
         ctx.restore();
       }
       const K = S.p(5);
@@ -379,10 +423,10 @@
         box(ctx, 150, y - 70, 320, 140, ['Feature encoder', 'keep ✓'], { size: 30, color: COL.B, stroke: COL.B });
         arrow(ctx, 480, y, 560, y, {});
         box(ctx, 570, y - 70, 320, 140, ['Transformer', 'keep ✓'], { size: 30, color: COL.B, stroke: COL.B });
-        box(ctx, 1030, y - 70, 300, 140, ['Quantizer', 'discard'], { size: 30, color: COL.dim });
-        box(ctx, 1400, y - 70, 360, 140, ['Projection heads', 'discard'], { size: 30, color: COL.dim });
         const c = S.p(5, 0.4, 2);
-        cross(ctx, 1180, y, 60 * c, COL.R, 8); cross(ctx, 1580, y, 60 * c, COL.R, 8);
+        box(ctx, 1030, y - 70, 300, 140, ['Quantizer', 'discard'], { size: 30, color: COL.dim, alpha: 1 - 0.5 * c });
+        box(ctx, 1400, y - 70, 360, 140, ['Projection heads', 'discard'], { size: 30, color: COL.dim, alpha: 1 - 0.5 * c });
+        cross(ctx, 1330, y - 70, 22 * c, COL.R, 6); cross(ctx, 1760, y - 70, 22 * c, COL.R, 6);
         txt(ctx, 'what we keep is exactly what we traced', W / 2, 700, { size: 36, weight: 700, align: 'center', color: COL.B, alpha: S.p(5, 0.6, 5) });
         ctx.restore();
       }
@@ -400,7 +444,7 @@
       "The strongest systems, like X L S R with an A A SIST back-end, work on four-second crops of sixty-four thousand six hundred samples. Run our formula: sixty-four thousand six hundred samples become two hundred and one frames. So X L S R outputs B by two hundred and one by one thousand and twenty-four, and a linear layer shrinks that to one hundred and twenty-eight features before the graph attention back-end.",
       "One practical detail. When clips in a batch have different lengths, the shorter ones are padded, and X L S R takes an attention mask, of shape B by number of samples, so attention can ignore the padding. When you pool over time, average only over the real frames. Detectors usually sidestep this by repeating short clips to fill a fixed crop. The next two videos, on the A A SIST and MamBo back-ends, pick up exactly here.",
     ],
-    hud: S => ({ stage: 6, shape: S.b === 3 && S.T(3) < S.st(3, 2) + 3 ? '({M:25}, {B:B}, {T:T}, {C:1024})' : ['({B:B}, {T:16000})', '({B:B}, {C:1024})', '({B:B}, {K:2})', '({B:B}, {T:T}, {C:1024})', '({B:B}, {T:201}, {C:1024})', '({B:B}, {T:L})  mask'][S.b] }),
+    hud: S => ({ stage: 6, shape: S.b === 3 && S.T(3) < S.st(3, 2) + 3 ? '({L:25}, {B:B}, {T:T}, {C:1024})' : ['({B:B}, {T:16000})', '({B:B}, {C:1024})', '({B:B}, {K:2})', '({B:B}, {T:T}, {C:1024})', '({B:B}, {T:201}, {C:1024})', '({B:B}, {T:L})  mask'][S.b] }),
     draw(ctx, S) {
       const A = S.vis(0, 1);
       if (A > 0) {
@@ -442,20 +486,33 @@
           box(ctx, 710, y0 + rows * ch + 40, 200, 120, ['Linear', '1024 → 2'], { size: 30, color: COL.K });
           arrow(ctx, 920, y0 + rows * ch + 101, 1000, y0 + rows * ch + 101, {});
           numRow(ctx, 1010, y0 + rows * ch + 75, [-0.5, 2.1], 100, 52, { size: 22, d: 1 });
-          txt(ctx, 'logits (B, 2)', 1110, y0 + rows * ch + 160, { size: 22, color: COL.dim, align: 'center' });
+          txt(ctx, 'logits (B, 2)', 1110, y0 + rows * ch + 50, { size: 22, color: COL.dim, align: 'center' });
+          const cl = S.ps(2, 2, 0.6);
+          txt(ctx, 'spoof 0', 1060, y0 + rows * ch + 160, { size: 18, weight: 700, align: 'center', color: COL.R, alpha: cl });
+          txt(ctx, 'bona fide 1', 1162, y0 + rows * ch + 160, { size: 18, weight: 700, align: 'center', color: COL.B, alpha: cl });
+          txt(ctx, 'ASVspoof: the standard benchmark for spoofed speech', 1010, y0 + rows * ch + 196, { size: 20, color: COL.dim, alpha: cl });
+          const sm = S.ps(2, 3, 0.6);
+          ctx.globalAlpha = P * h * sm;
           arrow(ctx, 1220, y0 + rows * ch + 101, 1290, y0 + rows * ch + 101, {});
+          txt(ctx, 'softmax', 1255, y0 + rows * ch + 82, { size: 18, align: 'center', color: COL.dim });
           const pb = [0.07, 0.93];
-          ['spoof (0)', 'bona fide (1)'].forEach((l, i) => {
+          ['spoof', 'bona fide'].forEach((l, i) => {
             const y = y0 + rows * ch + 60 + i * 60;
             rrect(ctx, 1300, y, 300, 38, 6, COL.panel, COL.line, 1);
-            rrect(ctx, 1300, y, 300 * pb[i] * S.p(2, 0.8, 5), 38, 6, i ? rgba(COL.B, 0.8) : rgba(COL.R, 0.8), null);
+            rrect(ctx, 1300, y, 300 * pb[i] * S.ps(2, 3, 0.8, 0.5), 38, 6, i ? rgba(COL.B, 0.8) : rgba(COL.R, 0.8), null);
             txt(ctx, `${l}  ${pb[i].toFixed(2)}`, 1620, y + 27, { size: 22, weight: 700, color: i ? COL.B : COL.R });
           });
-          ctx.globalAlpha = P * S.p(2, 0.6, 9);
-          rrect(ctx, 1080, 740, 740, 170, 14, COL.panel, COL.line, 2);
-          txt(ctx, 'loss: CE, class weights [0.1, 0.9]', 1105, 790, { size: 26 });
-          txt(ctx, 'fine-tune the front end too, small LR (~1e-5 … 1e-6)', 1105, 836, { size: 24, color: COL.dim });
-          txt(ctx, 'CNN encoder: frozen in some recipes, tuned in SSL-AASIST', 1105, 880, { size: 24, color: COL.dim });
+          ctx.globalAlpha = P * h;
+          // each line of the training box arrives with its sentence
+          const l1 = S.ps(2, 3, 0.6, 2.5), l2 = S.ps(2, 4), l3 = S.ps(2, 5);
+          ctx.globalAlpha = P * l1;
+          rrect(ctx, 1000, 700, 860, 250, 14, COL.panel, COL.line, 2);
+          mtxt(ctx, 'CE, bona fide clip:  − log {B:0.93} = 0.07', 1025, 748, { size: 26, mono: true });
+          txt(ctx, 'batch average weights spoof clips 0.1, bona fide clips 0.9', 1025, 790, { size: 23, color: COL.dim });
+          ctx.globalAlpha = P * l2;
+          txt(ctx, 'fine-tune the front end too, in very small steps', 1025, 850, { size: 24, color: COL.text });
+          ctx.globalAlpha = P * l3;
+          txt(ctx, 'CNN encoder: frozen in some recipes, tuned in SSL-AASIST', 1025, 900, { size: 24, color: COL.text });
         }
         ctx.restore();
       }
@@ -472,7 +529,7 @@
         mtxt(ctx, '25 hidden states, each ({B:B}, {T:T}, {C:1024})', 150, 720, { size: 24, mono: true, color: COL.dim });
         const wa = S.p(3, 0.6, 3);
         ctx.globalAlpha = L * wa;
-        txt(ctx, 'softmax(w)', 1000, 240, { size: 26, weight: 700, color: COL.K });
+        txt(ctx, 'softmax(w)  (illustrative: learned per model)', 1000, 240, { size: 26, weight: 700, color: COL.K });
         ws.forEach((w, i) => {
           const hh = w / tot * 1500;
           rrect(ctx, 1000 + i * 26, 520 - hh, 18, hh, 4, rgba(COL.K, 0.85), null);
@@ -483,7 +540,7 @@
         // the layer axis is summed away: written out, with the 25 struck through as the voice says it
         const ax = S.ps(3, 2), gone = S.ps(3, 2, 0.5, 2.5);
         if (ax > 0) {
-          const s1 = '({M:25}, {B:B}, {T:T}, {C:1024})', o = { size: 30, mono: true };
+          const s1 = '({L:25}, {B:B}, {T:T}, {C:1024})', o = { size: 30, mono: true };
           const w1 = mwidth(ctx, s1, o), x1 = W / 2 - 330 - w1 / 2;
           mtxt(ctx, s1, x1, 870, { ...o, alpha: ax });
           ctx.font = E.font(30, 400, true);
@@ -518,6 +575,7 @@
       if (M > 0) {
         ctx.save(); ctx.globalAlpha = M;
         const lens = [1, 0.62, 0.8], x0 = 250, w = 1000;
+        const rp = S.ps(5, 3, 1.2, 0.4);   // repeat-padding: the clip is tiled into the empty part of the crop
         lens.forEach((l, i) => {
           const y = 250 + i * 110;
           rrect(ctx, x0, y, w * l, 60, 8, COL.panel, COL.T, 2);
@@ -526,16 +584,33 @@
             ctx.save(); ctx.setLineDash([6, 6]);
             rrect(ctx, x0 + w * l + 4, y, w * (1 - l) - 4, 60, 8, 'rgba(90,100,120,0.15)', COL.faint, 2);
             ctx.restore();
-            txt(ctx, 'zero padding', x0 + w * l + w * (1 - l) / 2, y + 38, { size: 20, align: 'center', color: COL.faint });
+            txt(ctx, 'zero padding', x0 + w * l + w * (1 - l) / 2, y + 38, { size: 20, align: 'center', color: COL.faint, alpha: 1 - rp });
+            if (rp > 0) {
+              const xr = x0 + w * l + 4, wr = (w * (1 - l) - 4) * rp, fr = (w * (1 - l) - 4) / (w * l);
+              ctx.save(); ctx.globalAlpha = M * rp; ctx.beginPath(); ctx.rect(xr, y, wr, 60); ctx.clip();
+              rrect(ctx, xr, y, w * (1 - l) - 4, 60, 8, COL.panel, COL.A, 2);
+              drawWave(ctx, xr + 10, y + 30, w * l - 20, 50, { from: i * 2000, to: i * 2000 + Math.floor(12000 * l), color: COL.A });
+              ctx.restore();
+              txt(ctx, 'repeat ↻', xr + 12, y - 8, { size: 20, weight: 700, color: COL.A, alpha: M * rp });
+            }
           }
-          const ma = S.p(5, 0.5, 4);
-          ctx.globalAlpha = M * ma;
+          const ma = S.ps(5, 1, 0.5, 5);
+          ctx.globalAlpha = M * ma * (l < 1 ? 1 - rp : 1);
           txt(ctx, `1 1 1 … 1${l < 1 ? '  0 0 … 0' : ''}`, x0 + w + 60, y + 40, { size: 24, mono: true, color: COL.B });
+          if (l < 1 && rp > 0) { ctx.globalAlpha = M * ma * rp; txt(ctx, '1 1 1 … 1  1 1 … 1', x0 + w + 60, y + 40, { size: 24, mono: true, color: COL.B }); }
           ctx.globalAlpha = M;
         });
-        txt(ctx, 'attention_mask  (B, samples)', x0 + w + 60, 220, { size: 22, weight: 700, color: COL.B, alpha: S.p(5, 0.5, 4) });
-        mtxt(ctx, 'pooled = Σₜ h[t]·m[t] / Σₜ m[t]    (average over real frames only)', W / 2, 700, { size: 30, mono: true, align: 'center', alpha: S.p(5, 0.6, 12) });
-        txt(ctx, 'XLS-R takes an attention_mask when you pad; detectors usually repeat short clips to fill the crop instead.', W / 2, 780, { size: 21, align: 'center', color: COL.dim, alpha: S.p(5, 0.6, 14) });
+        txt(ctx, 'attention_mask  (B, samples)', x0 + w + 60, 220, { size: 22, weight: 700, color: COL.B, alpha: S.ps(5, 1, 0.5, 5) });
+        // samples → frames: the same length formula tells how many frames are real
+        const fm = S.ps(5, 2, 0.6, 0.2);
+        mtxt(ctx, '(a) zero-padding:  real frames = ⌊ (real samples − {K:400}) / {A:320} ⌋ + 1  →  m = 1 1 … 1 0 … 0', W / 2, 650, { size: 24, mono: true, align: 'center', alpha: fm });
+        mtxt(ctx, 'pooled = Σₜ h[t]·m[t] / Σₜ m[t]    (average over real frames only)', W / 2, 705, { size: 28, mono: true, align: 'center', alpha: S.ps(5, 2, 0.6, 2.2) });
+        mtxt(ctx, '(b) repeat-padding:  every frame is real  →  m = 1 1 … 1, a plain mean', W / 2, 765, { size: 24, mono: true, align: 'center', color: COL.A, alpha: S.ps(5, 3, 0.6, 1.6) });
+        const nx = S.ps(5, 4, 0.6, 1);
+        if (nx > 0) {
+          chip(ctx, W / 2 - 30, 840, 'next: episode 2 · AASIST', { size: 26, align: 'right', color: COL.H, stroke: COL.H, fill: rgba(COL.H, 0.08), alpha: nx });
+          chip(ctx, W / 2 + 30, 840, 'episode 3 · XLSR-MamBo', { size: 26, color: COL.K, stroke: COL.K, fill: rgba(COL.K, 0.08), alpha: S.ps(5, 4, 0.6, 2) });
+        }
         ctx.restore();
       }
     },
@@ -579,15 +654,15 @@
         const alpha = al * (dimAll > 0 && !emph ? 1 - 0.6 * dimAll : 1);
         if (dimAll > 0 && emph) rrect(ctx, 96, y - 40, 1728, 62, 10, rgba(COL.A, 0.1 * dimAll), rgba(COL.A, dimAll), 2);
         txt(ctx, a, 110, y, { size: 28, weight: 700, alpha });
-        mtxt(ctx, b, 520, y, { size: 24, color: COL.dim, alpha });
+        mtxt(ctx, b, 520, y, { size: 26, color: '#b4c0d2', alpha });
         mtxt(ctx, c, 1810, y, { size: 30, mono: true, align: 'right', alpha, color: COL.dim });
       });
       const fl = S.p(3, 0.6, 3);
-      if (fl > 0) mtxt(ctx, 'frames = ⌊(samples − 400) / 320⌋ + 1 :   16000 → {T:49}   ·   64600 (4 s crop) → {T:201}', 520, 885, { size: 24, mono: true, alpha: fl * (1 - 0.5 * S.p(4)) });
-      const f = S.p(4, 0.6, 4);
+      if (fl > 0) mtxt(ctx, 'frames = ⌊(samples − 400) / 320⌋ + 1 :   16000 → {T:49}   ·   64600 (4 s crop) → {T:201}', 520, 885, { size: 28, mono: true, alpha: fl * (1 - 0.5 * S.p(4)) });
+      const f = S.ps(4, 1, 0.6, 0.3);
       if (f > 0) {
         txt(ctx, 'feature encoder: shrinks time, sets the frame rate (20 ms)', 520, 940, { size: 28, weight: 700, color: COL.A, alpha: f });
-        txt(ctx, 'transformer: never changes the shape, only what each vector means', 520, 982, { size: 28, weight: 700, color: COL.A, alpha: S.p(4, 0.6, 7) });
+        txt(ctx, 'transformer: never changes the shape, only what each vector means', 520, 982, { size: 28, weight: 700, color: COL.A, alpha: S.ps(4, 2, 0.6, 0.3) });
       }
     },
   });
