@@ -447,7 +447,7 @@
           ctx.globalAlpha = a5;
         }
         wrap(ctx, 'For deepfake detection: subtle vocoder artifacts can survive in the raw samples, where a spectrogram might smear them.', 200, 760, 1520, 46, { size: 32, alpha: b, color: COL.text });
-        txt(ctx, 'vocoder: the part of a speech synthesizer that turns its features back into a waveform', 200, 880, { size: 24, color: COL.dim, alpha: b });
+        txt(ctx, 'vocoder: the part of a speech synthesizer that turns its features back into a waveform', 200, 880, { size: 24, color: '#b4c0d2', alpha: b });
         ctx.restore();
       }
     },
@@ -779,7 +779,8 @@
           else rrect(ctx, x0 + Math.min(cols - 1, hlp) * cw - 3, y0 - 3, cw + 6, rows * ch + 6, 6, null, COL.K, 4);
           ctx.globalAlpha = N;
         };
-        const a1 = S.ps(8, 1, 0.6), a2 = S.ps(8, 2, 0.6);
+        const a0 = 0.4 * S.ps(8, 0, 0.6, 0.3), a1 = Math.max(a0, S.ps(8, 1, 0.6)), a2 = Math.max(a0, S.ps(8, 2, 0.6));
+        txt(ctx, 'normalization: wav2vec 2.0 base vs XLS-R', W / 2, 150, { size: 26, weight: 700, align: 'center', alpha: N * S.ps(8, 0, 0.6, 0.3) });
         ctx.globalAlpha = N * a1;
         txt(ctx, 'GroupNorm, 512 groups', 150 + 330, 190, { size: 32, weight: 800, align: 'center', color: COL.A });
         txt(ctx, 'wav2vec 2.0 base: first conv only', 150 + 330, 230, { size: 24, align: 'center', color: COL.dim });

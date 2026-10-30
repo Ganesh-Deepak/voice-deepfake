@@ -85,3 +85,26 @@ The reviewer checks nine defects (narration out of sync with the picture, shapes
 shown, ideas used before they are explained, rushed or dead stretches, overlaps, broken motion)
 and scores clarity, shape legibility, sync, pacing, motion and polish out of 100.
 Each round's `review.md` and `metrics.md` are kept in `review/`.
+
+Review history. The rubric's weights sum to 110; early rounds reported that raw sum as if it were
+out of 100, so both are given. Every round was scored by a new reviewer, which moves totals by a
+few points on its own; what each round fixed is in the next commit.
+
+| Episode | Round | What was reviewed | Raw / 110 | / 100 |
+|---|---|---|---|---|
+| wav2vec 2.0 (old flat version) | 0 | the first series, for reference | 78 | 71 |
+| XLS-R 300M | 1 | 3-D version | 52 | 47 |
+| XLS-R 300M | 2 | flat scenes ported to XLS-R | 62 | 56 |
+| XLS-R 300M | 3 | sync and pacing fixes | 71 | 65 |
+| XLS-R 300M | 4 | round-3 fixes | 69 | 63 |
+| XLS-R 300M | 5 | round-4 fixes | 68 | 62 |
+| AASIST | 1 | first review | 61 | 55 |
+| AASIST | 2 | most scenes rebuilt | 67 | 61 |
+| AASIST | 3 | round-2 fixes | 71 | 65 |
+| XLSR-MamBo | 1 | first review | 63 | 57 |
+| XLSR-MamBo | 2 | Hydra block and pooling rebuilt | 60 | 55 |
+| XLSR-MamBo | 3 | round-2 fixes | 68 | 62 |
+
+No round found a factual error in the shapes or parameter counts after AASIST round 2 (which
+caught the row-wise softmax in graph attention). The fixes made after each episode's last round
+above have not been scored yet.

@@ -324,7 +324,7 @@
       "The result goes through GELU, and is added to the input. That's called a residual connection: the original frames are kept, and position-aware information is added on top. In X L S R there is no layer norm at this point: normalization happens inside every transformer block instead, and once more at the very end. The shape is still B by forty-nine by one thousand and twenty-four.",
       "Because this positional signal comes from a convolution, rather than a fixed table of positions, it's relative. It tells each frame about its neighbourhood, and it works for clips of any length.",
     ],
-    hud: { stage: 4, shape: '({B:B}, {T:49}, {C:1024})' },
+    hud: S => ({ stage: 4, shape: S.b === 2 && S.past(2, 0, 1.5) && !S.past(2, 2, 3) ? '({B:B}, {C:1024}, {T:49})' : '({B:B}, {T:49}, {C:1024})', label: S.b === 2 && S.past(2, 0, 1.5) && !S.past(2, 2, 3) ? 'channels first' : 'tensor shape' }),
     draw(ctx, S) {
       // set illustration
       const A = S.vis(0, 1);
@@ -373,8 +373,20 @@
           dimBottom(ctx, x0 + 113 * cw, y0 + rows * ch + 6, 64 * cw, '64 zeros', COL.dim, 22);
           ctx.globalAlpha = Bv;
         }
+        if (S.b === 1 && !S.past(1, 1)) {
+          const sw = clamp((S.T(1) - 0.8) / 4), k = 64 + Math.floor(sw * 44);
+          ctx.save(); ctx.globalAlpha *= S.p(1, 0.5, 0.6); rrect(ctx, x0 + k * cw - 2, y0 - 8, 5 * cw + 4, rows * ch + 16, 6, rgba(COL.K, 0.15), COL.K, 3);
+          txt(ctx, 'sliding along time', x0 + (k + 2.5) * cw, y0 + rows * ch + 50, { size: 24, weight: 700, align: 'center', color: COL.K }); ctx.restore();
+        }
+        if (S.b === 1 && S.past(1, 1)) {
+          // the kernel spans more than the whole clip: the part outside is drawn as an empty, dashed region
+          ctx.save(); ctx.globalAlpha *= S.ps(1, 1, 0.6, 0.6); ctx.setLineDash([8, 8]);
+          rrect(ctx, x0 + 20 * cw, y0, 44 * cw, rows * ch, 6, null, COL.faint, 1.5); rrect(ctx, x0 + 113 * cw, y0, 35 * cw, rows * ch, 6, null, COL.faint, 1.5);
+          ctx.restore();
+          txt(ctx, 'the kernel is wider than the whole 49-frame clip → padding, next', W / 2, y0 + rows * ch + 110, { size: 24, weight: 700, align: 'center', color: COL.text, alpha: S.ps(1, 1, 0.6, 2) });
+        }
         // kernel window
-        const ka = S.p(1, 0.6, 4);
+        const ka = S.ps(1, 1, 0.6, 0.3);
         if (ka > 0) {
           const pos = S.b >= 2 ? Math.floor(S.l(2, 4, S.st(2, 2)) * 49.99) : 20;
           const kx = x0 + pos * cw + (S.b >= 2 ? 0 : 64 * cw - 64 * cw);
@@ -440,7 +452,7 @@
       // residual flow
       const R = S.p(4);
       if (R > 0) {
-        ctx.save(); ctx.globalAlpha = R * (1 - 0.0 * S.p(5));
+        ctx.save(); ctx.globalAlpha = R * (1 - S.p(5, 0.6, 0.2));
         const y = 420;
         chip(ctx, 150, y, '({B:B}, {T:49}, {C:1024})', { markup: true, size: 24, mono: true, align: 'left' });
         arrow(ctx, 380, y, 560, y, {});
@@ -471,6 +483,24 @@
         mtxt(ctx, 'x  ←  x + GELU( conv(x) )', W / 2, 250, { size: 38, mono: true, align: 'center', weight: 600, alpha: S.p(4, 0.6, 3) });
         const c = S.p(5, 0.6, 0.5);
         if (c > 0) {
+          // the same sound at two places gets two different outputs, because their neighbourhoods differ
+          const nb = S.ps(5, 1, 0.6), cA = (i, out) => {
+            if (i === 3 || i === 11) return out ? (i === 3 ? COL.C : COL.A) : COL.K;
+            return vcol(noise(i, 1, 97) * 0.9, 0.85);
+          };
+          ctx.globalAlpha = c;
+          txt(ctx, 'the same sound at two places', 140, 210, { size: 26, weight: 700 });
+          for (let i = 0; i < 16; i++) rrect(ctx, 140 + i * 50, 230, 42, 60, 6, cA(i, false), i === 3 || i === 11 ? COL.K : COL.line, 2);
+          ctx.globalAlpha = nb;
+          arrow(ctx, 540, 304, 540, 360, {});
+          txt(ctx, 'the conv mixes each frame with its neighbours', 560, 340, { size: 22, color: COL.dim });
+          for (let i = 0; i < 16; i++) rrect(ctx, 140 + i * 50, 380, 42, 60, 6, cA(i, true), i === 3 || i === 11 ? COL.text : COL.line, 2);
+          txt(ctx, 'different outputs: position, relative to the neighbours', 140, 490, { size: 24, weight: 700, color: COL.A });
+          ctx.globalAlpha = S.ps(5, 0, 0.6, 2.5);
+          rrect(ctx, 1020, 190, 800, 340, 14, COL.panel, COL.line, 2);
+          txt(ctx, 'other models: a fixed position table', 1050, 235, { size: 24, weight: 700, color: COL.dim });
+          cells(ctx, 1050, 260, 8, 24, 30, 26, (r, cc) => scol(0.5 + 0.45 * Math.sin(cc / (1 + r) * 1.3)), 1);
+          txt(ctx, 'row = position: a fixed vector, and a fixed maximum length', 1050, 500, { size: 22, color: COL.dim });
           ctx.globalAlpha = R * c;
           rrect(ctx, 300, 760, 1320, 120, 14, COL.panel, rgba(COL.A, 0.6), 2);
           txt(ctx, 'relative position from the neighbourhood · works for any clip length', W / 2, 830, { size: 30, weight: 600, align: 'center' });
@@ -802,6 +832,9 @@
         ctx.save(); ctx.globalAlpha = Hv;
         const sc = 1.9;
         heat(ctx, 300, 780 - 49 * sc, 49 * sc, 49, PAT.local);
+        ctx.save(); ctx.globalAlpha *= S.ps(8, 0, 0.6, 1) * (1 - S.ps(8, 2, 0.6)); ctx.setLineDash([10, 8]);
+        rrect(ctx, 900, 780 - 201 * sc, 201 * sc, 201 * sc, 6, null, COL.faint, 2); ctx.restore();
+        txt(ctx, '4 s → 201 frames: ?', 900 + 201 * sc / 2, 780 - 201 * sc / 2, { size: 26, weight: 700, align: 'center', color: COL.dim, alpha: S.ps(8, 0, 0.6, 1) * (1 - S.ps(8, 2, 0.6)) });
         txt(ctx, '1 s → 49 frames', 300 + 49 * sc / 2, 830, { size: 26, weight: 700, align: 'center' });
         txt(ctx, '2,401 scores / head', 300 + 49 * sc / 2, 870, { size: 26, align: 'center', color: COL.text, mono: true, weight: 700, alpha: S.ps(8, 1, 0.6) });
         const b = S.ps(8, 2, 0.8);

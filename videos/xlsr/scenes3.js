@@ -57,7 +57,7 @@
         const l = S.p(1, 0.6, 7);
         txt(ctx, 'h₀ = after positional conv (input to layer 1)', 180, 830, { size: 26, alpha: l, color: COL.T });
         txt(ctx, 'h₁ … h₂₄ = output of layers 1 … 24', 180, 875, { size: 26, alpha: l, color: COL.H });
-        txt(ctx, 'in transformers 4.x, h₂₄ comes back after the final LayerNorm, so it equals last_hidden_state', 180, 915, { size: 21, alpha: l, color: COL.dim });
+        txt(ctx, 'in transformers 4.x, h₂₄ comes back after the final LayerNorm, so it equals last_hidden_state', 180, 918, { size: 24, alpha: l, color: '#b4c0d2' });
         mtxt(ctx, 'each one: ({B:B}, {T:49}, {C:1024})', 1510, 600, { size: 30, mono: true, align: 'center', alpha: S.ps(1, 2) * (1 - S.p(2, 0.5, 0)) });
         const b2 = S.p(2, 0.8);
         if (b2 > 0) {
@@ -93,7 +93,7 @@
         });
         ctx.globalAlpha = Cv * S.p(3, 0.6, 9);
         txt(ctx, 'total = 315,438,720  (the “300M” is rounded)', W / 2, 760, { size: 40, weight: 800, align: 'center' });
-        txt(ctx, 'the bars leave out 3,072: the final LayerNorm (2,048) and the mask vector (1,024)', W / 2, 810, { size: 22, align: 'center', color: COL.dim, alpha: S.p(3, 0.6, 10) });
+        txt(ctx, 'the bars leave out 3,072: the final LayerNorm (2,048) and the mask vector (1,024)', W / 2, 812, { size: 24, align: 'center', color: '#b4c0d2', alpha: S.p(3, 0.6, 10) });
         ctx.restore();
       }
     },
@@ -274,7 +274,6 @@
         txt(ctx, 'backward', 1410, 600, { size: 22, weight: 700, color: COL.text });
         bars(1410, 760, probs, rgba(COL.M, 0.75), false);
         probs.forEach((v, j) => arrow(ctx, 1418 + j * 22, 630, 1418 + j * 22, 760 - 110 * v / 0.46 - 6, { color: COL.R, lw: 2, head: 8 }));
-        txt(ctx, 'temperature τ annealed', 1820, 600, { size: 18, align: 'right', color: COL.dim });
         mtxt(ctx, 'gradients flow into {K:every} entry', 1410, 800, { size: 22, color: COL.text });
         ctx.restore();
       }
@@ -405,6 +404,15 @@
         ctx.save(); ctx.globalAlpha = D;
         rrect(ctx, 100, 640, 1720, 290, 16, 'rgba(10,14,22,0.97)', COL.line, 2);
         wrap(ctx, 'To pick the right q_t, the model must infer what the hidden audio sounds like from context → it learns phonemes, speakers, rhythm.', 140, 700, 1000, 42, { size: 28 });
+        const cx4 = S.ps(4, 0, 0.6, 1.5);
+        if (cx4 > 0) {
+          ctx.save(); ctx.globalAlpha = D * cx4;
+          for (let f = 0; f < 49; f++) rrect(ctx, 140 + f * 17, 806, 14, 24, 3, f >= 20 && f < 30 ? rgba(COL.M, 0.6) : rgba(COL.T, 0.35), f === 24 ? COL.K : null, 2);
+          ctx.strokeStyle = rgba(COL.A, 0.8); ctx.lineWidth = 1.8;
+          [12, 14, 16, 18, 31, 33, 35, 37].forEach(f => { const x1 = 147 + f * 17, x2 = 147 + 24 * 17; ctx.beginPath(); ctx.moveTo(x1, 802); ctx.quadraticCurveTo((x1 + x2) / 2, 802 - Math.abs(x2 - x1) * 0.25, x2, 802); ctx.stroke(); });
+          txt(ctx, 'context → hidden frame t', 140 + 25 * 17, 856, { size: 22, weight: 700, align: 'center', color: COL.A });
+          ctx.restore();
+        }
         mtxt(ctx, 'L = L_contrastive + {K:0.1} · L_diversity', 140, 880, { size: 32, mono: true, alpha: S.ps(4, 2, 0.6) });
         const hg = S.ps(4, 2, 0.6, 0.4);
         ctx.globalAlpha = D * hg;
@@ -488,8 +496,8 @@
           numRow(ctx, 1010, y0 + rows * ch + 75, [-0.5, 2.1], 100, 52, { size: 22, d: 1 });
           txt(ctx, 'logits (B, 2)', 1110, y0 + rows * ch + 50, { size: 22, color: COL.dim, align: 'center' });
           const cl = S.ps(2, 2, 0.6);
-          txt(ctx, 'spoof 0', 1060, y0 + rows * ch + 160, { size: 18, weight: 700, align: 'center', color: COL.R, alpha: cl });
-          txt(ctx, 'bona fide 1', 1162, y0 + rows * ch + 160, { size: 18, weight: 700, align: 'center', color: COL.B, alpha: cl });
+          txt(ctx, 'spoof 0', 1055, y0 + rows * ch + 160, { size: 21, weight: 700, align: 'center', color: COL.R, alpha: cl });
+          txt(ctx, 'bona fide 1', 1172, y0 + rows * ch + 160, { size: 21, weight: 700, align: 'center', color: COL.B, alpha: cl });
           txt(ctx, 'ASVspoof: the standard benchmark for spoofed speech', 1010, y0 + rows * ch + 196, { size: 20, color: COL.dim, alpha: cl });
           const sm = S.ps(2, 3, 0.6);
           ctx.globalAlpha = P * h * sm;
@@ -508,7 +516,7 @@
           ctx.globalAlpha = P * l1;
           rrect(ctx, 1000, 700, 860, 250, 14, COL.panel, COL.line, 2);
           mtxt(ctx, 'CE, bona fide clip:  − log {B:0.93} = 0.07', 1025, 748, { size: 26, mono: true });
-          txt(ctx, 'batch average weights spoof clips 0.1, bona fide clips 0.9', 1025, 790, { size: 23, color: COL.dim });
+          txt(ctx, 'batch average weights spoof clips 0.1, bona fide clips 0.9', 1025, 790, { size: 24, color: '#b4c0d2' });
           ctx.globalAlpha = P * l2;
           txt(ctx, 'fine-tune the front end too, in very small steps', 1025, 850, { size: 24, color: COL.text });
           ctx.globalAlpha = P * l3;
