@@ -23,7 +23,7 @@
   }
   function selu(x) { return 1.0507 * (x > 0 ? x : 1.67326 * (Math.exp(x) - 1)); }
   const SHP = {
-    in: '({B:B}, {T:201}, {C:1024})', ll: '({B:B}, {T:201}, {C:128})', img: '({B:B}, {C:1}, {F:128}, {T:201})', pool: '({B:B}, {C:1}, {F:42}, {T:67})',
+    in: '({B:B}, {T:201}, {C:1024})', ll: '({B:B}, {T:201}, {F:128})', img: '({B:B}, {C:1}, {F:128}, {T:201})', pool: '({B:B}, {C:1}, {F:42}, {T:67})',
     enc: '({B:B}, {C:64}, {F:42}, {T:67})', eS: '({B:B}, {N:42}, {C:64})', eT: '({B:B}, {N:67}, {C:64})',
     nodes: '({B:B}, {N:42}, {C:64}) · ({B:B}, {N:67}, {C:64})',
   };
@@ -53,7 +53,7 @@
       // the image
       const gx = x0, gy = 590, gw = 470, gh = 250;
       mat(ctx, gx, gy, gw, gh, { rows: 18, cols: 34, seed: 31, alpha: S.p(0, 0.9, 0.4), fn: (r, c) => scol(clamp(0.5 + 0.45 * noise(r, c, 31) * Math.exp(-((r - 6) ** 2) / 60)), 0.95) });
-      mtxt(ctx, 'inside AASIST: {F:42} rows × {T:67} frames', gx + gw / 2, gy + gh + 46, { size: 24, mono: true, align: 'center', alpha: S.p(0, 0.6, 1.6) });
+      mtxt(ctx, 'inside AASIST: {F:42} rows × {T:67} time steps', gx + gw / 2, gy + gh + 46, { size: 24, mono: true, align: 'center', alpha: S.p(0, 0.6, 1.6) });
       // while the legend names F, the grid's rows are marked teal
       const lf = S.ps(2, 1, 0.6, 1.5);
       if (lf > 0) { ctx.save(); ctx.globalAlpha = lf; dimLeft(ctx, gx - 6, gy, gh, '{F:42}', COL.F, 26); for (let r = 0; r < 18; r += 3) rrect(ctx, gx - 2, gy + r * gh / 18, gw + 4, gh / 18, 2, null, rgba(COL.F, 0.7), 1.5); ctx.restore(); }
@@ -188,14 +188,13 @@
       const f = S.ps(5, 1, 0.8, 0.2);
       if (f > 0) {
         ctx.save(); ctx.globalAlpha = f;
-        const L = 1500, gw = easeIO(S.l(5, 1.4, S.st(5, 1) + 0.4));
+        const L = 1500, gw = easeIO(S.l(5, 1.4, S.st(5, 2) + 0.3)), b = S.ps(5, 2, 0.6, 0.2);
         txt(ctx, 'parameters, linear scale', 210, 800, { size: 22, color: COL.dim });
-        rrect(ctx, 210, 818, L * gw, 40, 8, rgba(COL.A, 0.35), COL.A, 2);
-        txt(ctx, 'XLS-R 300M  315,438,720', 230, 846, { size: 24, weight: 700, color: COL.text });
-        const b = S.ps(5, 2, 0.6, 0.2);
+        rrect(ctx, 210, 818, Math.max(3, L * 447242 / 315438720), 40, 2, COL.H, null);
+        txt(ctx, 'AASIST back-end  447,242', 232, 846, { size: 24, weight: 700, color: COL.H });
         ctx.globalAlpha = f * b;
-        rrect(ctx, 210, 880, Math.max(3, L * 447242 / 315438720), 40, 2, COL.H, null);
-        txt(ctx, 'AASIST back-end  447,242  =  0.14 %  (about 700× smaller)', 232, 909, { size: 24, weight: 700, color: COL.H });
+        rrect(ctx, 210, 880, L * gw, 40, 8, rgba(COL.A, 0.35), COL.A, 2);
+        txt(ctx, 'XLS-R 300M  315,438,720  ·  AASIST is 0.14 % of it (about 700× smaller)', 230, 908, { size: 24, weight: 700, color: COL.text });
         ctx.restore();
       }
     },
@@ -265,7 +264,7 @@
         arrow(ctx, 760, 450, 880, 450, { color: COL.K });
         box(ctx, 890, 390, 250, 120, ['LL', '1024 → 128'], { size: 34, color: COL.K });
         arrow(ctx, 1150, 450, 1240, 450, { color: COL.K });
-        mat(ctx, 1380, 300, 150, 300, { rows: 16, cols: 8, seed: 302, left: ['{T:201}', COL.T], top: ['{C:128}', COL.C], title: 'x' });
+        mat(ctx, 1380, 300, 150, 300, { rows: 16, cols: 8, seed: 302, left: ['{T:201}', COL.T], top: ['{F:128}', COL.F], title: 'x' });
         mtxt(ctx, 'LL.weight.shape = ({C:128}, {C:1024})    y = x·Wᵀ + b', W / 2, 720, { size: 30, mono: true, align: 'center', alpha: S.ps(2, 1, 0.6, 0.3) });
         // "every frame keeps its place": the same row lights up on both sides, and a pulse carries it through LL
         const fr = S.ps(2, 2, 0.5) * (1 - S.p(3, 0.5));
@@ -279,7 +278,7 @@
           txt(ctx, 'frame 7 stays frame 7: only its 1024 numbers become 128', W / 2, 655, { size: 24, weight: 600, align: 'center', color: COL.A });
         }
         ctx.globalAlpha = Bv;
-        mtxt(ctx, '({B:B}, {T:201}, {C:1024})  →  ({B:B}, {T:201}, {C:128})     131,200 weights', W / 2, 790, { size: 28, mono: true, align: 'center', alpha: S.ps(2, 3, 0.6, 0.2), color: COL.dim });
+        mtxt(ctx, '({B:B}, {T:201}, {C:1024})  →  ({B:B}, {T:201}, {F:128})     131,200 weights', W / 2, 790, { size: 28, mono: true, align: 'center', alpha: S.ps(2, 3, 0.6, 0.2), color: COL.dim });
         // beat 3: gradients flow back into XLS-R too, in tiny steps
         const c = S.p(3, 0.6, 0.3);
         if (c > 0) {
@@ -292,6 +291,19 @@
           ctx.restore();
           arrow(ctx, 460, 628, 460, 606, { color: COL.R, head: 12 });
           txt(ctx, 'gradients reach XLS-R too, in tiny steps', 740, 648, { size: 22, weight: 700, align: 'center', color: COL.R, alpha: S.ps(3, 0, 0.6, 1) });
+          const st = S.ps(3, 1, 0.6);
+          if (st > 0) {
+            ctx.globalAlpha = Bv * st;
+            const px = 1590, py = 300, pw = 280, ph = 240, f = u => py + ph - ph * 0.9 * (1 - 4 * (u - 0.5) ** 2);
+            rrect(ctx, px - 20, py - 50, pw + 40, ph + 110, 12, COL.panel, COL.line, 1.5);
+            txt(ctx, 'pre-trained features', px + pw / 2, py - 18, { size: 20, weight: 700, align: 'center' });
+            ctx.strokeStyle = COL.faint; ctx.lineWidth = 2; ctx.beginPath(); for (let i = 0; i <= 40; i++) { const u = i / 40; i ? ctx.lineTo(px + u * pw, f(u)) : ctx.moveTo(px, f(0)); } ctx.stroke();
+            const k = clamp((S.T(3) - S.st(3, 1) - 0.4) / 4), big = [0.48, 0.15, 0.9, 0.05, 0.95][Math.min(4, Math.floor(k * 5))], small = 0.48 + 0.04 * k;
+            ctx.fillStyle = COL.R; ctx.beginPath(); ctx.arc(px + big * pw, f(big) - 8, 9, 0, 7); ctx.fill();
+            ctx.fillStyle = COL.B; ctx.beginPath(); ctx.arc(px + small * pw, f(small) - 8, 9, 0, 7); ctx.fill();
+            txt(ctx, 'big steps: thrown away', px, py + ph + 30, { size: 20, weight: 700, color: COL.R });
+            txt(ctx, 'lr 1e-6: kept, gently adjusted', px, py + ph + 54, { size: 20, weight: 700, color: COL.B });
+          }
         }
         ctx.restore();
       }
@@ -331,13 +343,13 @@
         }
         const la = 1 - clamp((tl - 1.0) / 0.6), lb = clamp((tl - 3.1) / 0.5);
         ctx.globalAlpha = A * la;
-        dimLeft(ctx, bx - 6, by, Cc * s, '{T:201}', COL.T, 24); dimTop(ctx, bx, by - 6, R * s, '{C:128}', COL.C, 24);
+        dimLeft(ctx, bx - 6, by, Cc * s, '{T:201}', COL.T, 24); dimTop(ctx, bx, by - 6, R * s, '{F:128}', COL.F, 24);
         ctx.globalAlpha = A * lb;
         dimLeft(ctx, ax - 6, ay, R * s, 'height {F:128}', COL.F, 24); dimTop(ctx, ax, ay - 6, Cc * s, 'width {T:201}', COL.T, 24);
         ctx.globalAlpha = A;
         const u = S.ps(0, 2, 0.6, 0.2);
         if (u > 0) { ctx.globalAlpha = A * u; rrect(ctx, ax - 10, ay - 10, Cc * s + 20, R * s + 20, 10, null, COL.C, 3); txt(ctx, 'channel axis added: C = 1', ax + Cc * s / 2, ay + R * s + 50, { size: 24, weight: 700, align: 'center', color: COL.C }); ctx.globalAlpha = A; }
-        mtxt(ctx, '({B:B}, {T:201}, {C:128})', 1380, 330, { size: 34, mono: true, align: 'center' });
+        mtxt(ctx, '({B:B}, {T:201}, {F:128})', 1380, 330, { size: 34, mono: true, align: 'center' });
         mtxt(ctx, '.transpose(1, 2)  →  ({B:B}, {F:128}, {T:201})', 1380, 400, { size: 28, mono: true, align: 'center', alpha: S.ps(0, 1, 0.6, 0.3) });
         mtxt(ctx, '.unsqueeze(1)  →  ({B:B}, {C:1}, {F:128}, {T:201})', 1380, 460, { size: 28, mono: true, align: 'center', alpha: u });
         const b = S.p(1, 0.6, 0.5);
@@ -487,7 +499,7 @@
             const x = 200 + i * 78, y = 730 + o * 60;
             cells(ctx, x, y, 2, 3, 20, 22, (a, b) => vcol(noise(o * 7 + i, a * 3 + b, 331), 0.9), 2);
           }
-          txt(ctx, 'example: a 32 → 32 layer (blocks 2 onward)', 200, 690, { size: 24, weight: 700, color: COL.K });
+          txt(ctx, 'example: a 32 → 32 layer (blocks 2 onward)', 200, 690, { size: 24, weight: 700, color: COL.K, alpha: S.ps(1, 1, 0.6) });
           txt(ctx, '… 32 out', 330, 935, { size: 22, color: COL.dim, align: 'center' });
           txt(ctx, '… 32 in →', 690, 745, { size: 22, color: COL.dim });
           mtxt(ctx, 'weight: ({C:32} out, {C:32} in, {F:2}, {T:3})', 900, 770, { size: 32, mono: true, alpha: S.ps(1, 1, 0.6) });
@@ -500,7 +512,7 @@
       const P1 = S.vis(2, 3);
       if (P1 > 0) {
         ctx.save(); ctx.globalAlpha = P1;
-        mtxt(ctx, 'out  =  ⌊ (in + 2·{A:p} − {K:k}) / s ⌋ + 1', W / 2, 200, { size: 38, mono: true, align: 'center', weight: 600 });
+        mtxt(ctx, 'out  =  ⌊ (in + 2·{A:p} − {K:k}) / s ⌋ + 1      (stride s = 1 here)', W / 2, 200, { size: 36, mono: true, align: 'center', weight: 600 });
         const ring = S.ps(2, 2, 0.6), prog = clamp((S.T(2) - S.st(2, 2) - 1.2) / 4.5);
         txt(ctx, 'conv1, pad (1, 1): a ring of zeros', 170, 272, { size: 26, weight: 700, color: COL.K, alpha: ring });
         padDemo(ctx, 4, 7, 1, 1, prog, ring, 170, 290, 1000, 318, 341);
@@ -844,7 +856,7 @@
         ctx.globalAlpha = Pm * vv;
         const pk = S.b > 1 ? 6 : Math.floor(clamp((S.T(1) - S.st(1, 1) - 1.2) / 2.4) * 6.99);
         numRow(ctx, 980, 350, vi.map((v, k) => k < pk ? v * vj[k] : null), 70, 44, { size: 18, d: 2, stroke: COL.K, fill: k => k < pk ? rgba(COL.K, 0.2) : 'rgba(0,0,0,0)' });
-        txt(ctx, 'pair vector p₂₆ (64 numbers; 6 shown)', 1190, 424, { size: 22, color: COL.K, align: 'center', alpha: pk >= 6 ? 1 : 0 });
+        txt(ctx, 'pair vector of nodes 2 and 6 (64 numbers; 6 shown)', 1190, 424, { size: 22, color: COL.K, align: 'center', alpha: pk >= 6 ? 1 : 0 });
         ctx.globalAlpha = Pm * (1 - S.p(2, 0.5, 0.6));
         mtxt(ctx, 'all pairs: ({B:B}, {N:42}, {N:42}, {C:64})', 1190, 520, { size: 30, mono: true, align: 'center', alpha: S.ps(1, 2, 0.6) });
         txt(ctx, 'x.unsqueeze(2) * x.unsqueeze(1)', 1190, 570, { size: 24, mono: true, align: 'center', color: COL.dim, alpha: S.ps(1, 2, 0.6, 1.5) });
@@ -862,7 +874,7 @@
         box(ctx, 1040, 580, 300, 64, '· a   (learned 64-vector)', { size: 22, color: COL.H });
         arrow(ctx, 1190, 436, 1190, 466, {}); arrow(ctx, 1190, 542, 1190, 576, {});
         const pel = clamp((t2 - 0.6) / 1.8);
-        if (pel > 0 && pel < 1) { const y = lerp(400, 612, easeIO(pel)); rrect(ctx, 1160, y - 12, 60, 24, 6, rgba(COL.K, 0.85), null); txt(ctx, 'p₂₆', 1190, y + 1, { size: 16, weight: 700, align: 'center', base: 'middle', color: COL.bg }); }
+        if (pel > 0 && pel < 1) { const y = lerp(400, 612, easeIO(pel)); rrect(ctx, 1150, y - 12, 80, 24, 6, rgba(COL.K, 0.85), null); txt(ctx, 'pair 2,6', 1190, y + 1, { size: 16, weight: 700, align: 'center', base: 'middle', color: COL.bg }); }
         const sc = clamp((t2 - 2.5) / 1.0);
         const sv = GS[PI_][PJ], cxT = mx + PJ * mc + mc / 2, cyT = my + PI_ * mc + mc / 2;
         if (sc > 0 && sc < 1) chip(ctx, lerp(1190, cxT, easeIO(sc)), lerp(680, cyT, easeIO(sc)) - 16, sv.toFixed(2), { size: 22, mono: true, align: 'center', color: COL.K, stroke: COL.K, fill: COL.bg2 });
@@ -876,9 +888,10 @@
           rrect(ctx, mx + j * mc + 2, my + i * mc + 2, mc - 4, mc - 4, 5, on > 0 ? E.mix(COL.bg2, COL.K, clamp(v) * on) : 'rgba(0,0,0,0)', rgba(COL.line, 0.8), 1);
           if (first && on > 0) txt(ctx, sv.toFixed(1), mx + j * mc + mc / 2, my + i * mc + mc / 2 + 1, { size: 15, mono: true, weight: 700, align: 'center', base: 'middle', color: COL.bg, alpha: on * (1 - soft) });
         }
-        dimLeft(ctx, mx - 6, my, gN * mc, 'i', COL.N, 22); dimTop(ctx, mx, my - 6, gN * mc, 'j', COL.N, 22);
+        for (let q = 0; q < gN; q++) { txt(ctx, String(q + 1), mx - 14, my + q * mc + mc / 2 + 7, { size: 20, weight: 700, align: 'right', color: q === AGG && S.b >= 3 ? COL.K : COL.N }); txt(ctx, String(q + 1), mx + q * mc + mc / 2, my - 10, { size: 20, weight: 700, align: 'center', color: COL.N }); }
+        txt(ctx, 'node i ↓   node j →', mx + gN * mc / 2, my - 36, { size: 20, color: COL.dim, align: 'center' });
         mtxt(ctx, '8 × 8 shown · real map {N:42} × {N:42}', mx + gN * mc / 2, my + gN * mc + 44, { size: 22, align: 'center', color: COL.dim });
-        txt(ctx, soft ? 'weights' : 'scores', mx + gN * mc / 2, my - 52, { size: 26, weight: 700, align: 'center', color: COL.K });
+        txt(ctx, soft ? 'weights' : 'scores', mx + gN * mc / 2, my - 64, { size: 26, weight: 700, align: 'center', color: COL.K });
         // beat 3: one column is normalised (softmax over dim −2), then the temperature comparison
         if (S.b === 3) {
           const ca = S.p(3, 0.6, 0.6);
@@ -893,11 +906,11 @@
             txt(ctx, label, x + 4 * 22, y + 32, { size: 22, weight: 700, align: 'center', color: col });
             ctx.restore();
           };
-          bars(950, 830, 2, 'T = 2 (this layer)', COL.K, S.p(3, 0.6, 1.4));
+          bars(950, 830, 2, 'τ = 2 (this layer)', COL.K, S.p(3, 0.6, 1.4));
           const tv = S.ps(3, 1, 0.6, 0.3);
-          bars(720, 830, 0.5, 'T = 0.5: sharper', COL.R, tv);
-          bars(1180, 830, 100, 'T = 100: even', COL.A, S.ps(3, 1, 0.6, 1.6));
-          txt(ctx, 'softmax(score / T)', 1045, 610, { size: 28, mono: true, align: 'center', color: COL.text, alpha: ca });
+          bars(720, 830, 0.5, 'τ = 0.5: sharper', COL.R, tv);
+          bars(1180, 830, 100, 'τ = 100: even', COL.A, S.ps(3, 1, 0.6, 1.6));
+          txt(ctx, 'softmax(score / τ)', 1045, 610, { size: 28, mono: true, align: 'center', color: COL.text, alpha: ca });
         }
         ctx.restore();
       }
@@ -966,15 +979,15 @@
       const n = 14, gap = 110, x0 = (W - (n - 1) * gap) / 2, y = 470;
       const order = PS.map((v, i) => [v, i]).sort((a, b) => b[0] - a[0]).map(p => p[1]);
       const keep = new Set(order.slice(0, n / 2));
-      const t = easeIO(S.l(1, 1.4, 1.5)), mul = easeIO(S.l(1, 0.8, S.st(1, 0) + 3.2));
+      const lose = easeIO(S.l(1, 0.7, 1.2)), t = easeIO(S.l(1, 1.2, 2.0)), mul = easeIO(S.l(1, 0.8, S.st(1, 0) + 3.4));
       for (let i = 0; i < n; i++) {
         const kept = keep.has(i), rank = order.indexOf(i);
         // topk hands the kept nodes back in score order
         const tx = kept ? x0 + rank * gap + (n / 2) * gap / 2 : x0 + i * gap;
-        const x = lerp(x0 + i * gap, tx, kept ? t : 0), a = kept ? 1 : 1 - t;
+        const x = lerp(x0 + i * gap, tx, kept ? t : 0), a = kept ? 1 : 1 - lose;
         const r = 30 * (kept ? lerp(1, 0.45 + 0.55 * PS[i], mul) : 1);
         node(ctx, x, y, r, COL.N, a * S.p(0, 0.5, i * 0.08));
-        const sa = S.ps(0, 1, 0.5, 0.6 + i * 0.1) * a;
+        const sa = S.ps(0, 1, 0.5, 0.6 + i * 0.1) * a * (kept && t > 0 && t < 1 ? 0.15 : 1);
         if (sa > 0) {
           ctx.save(); ctx.globalAlpha = sa;
           rrect(ctx, x - 16, y + 50, 32, 150, 5, COL.panel, COL.line, 1);
@@ -1003,7 +1016,7 @@
       "Now the two views meet. The heterogeneous stacking graph attention layer, H S G A L, puts the spectral and temporal nodes into one graph.",
       "Each type is first projected with its own linear layer, and the two sets are stacked along the node axis. Thirty-three temporal nodes plus twenty-one spectral nodes is fifty-four nodes: B by fifty-four by sixty-four.",
       "The attention map is now fifty-four by fifty-four, and it's split into blocks: temporal with temporal, spectral with spectral, and the cross-type blocks between them. Each block type gets its own learned scoring vector, so the layer can weigh same-type and cross-type connections differently. The temperature here is one hundred, which keeps the weights soft.",
-      "There's also a master node: a learned vector of sixty-four numbers that attends to all fifty-four nodes and collects a summary of the whole graph.",
+      "There's also a master node: a learned vector of sixty-four numbers that attends to all fifty-four nodes and collects a summary of the whole graph. It only reads: in this layer, the nodes don't read the master back.",
       "The layer projects everything down to thirty-two numbers per node. Then it splits the stack back apart: B by thirty-three by thirty-two temporal nodes, B by twenty-one by thirty-two spectral nodes, and a master of B by one by thirty-two.",
     ],
     hud: S => S.b === 0 || (S.b === 1 && !S.past(1, 1)) ? { stage: 6, shape: '({B:B}, {N:33}, {C:64}) · ({B:B}, {N:21}, {C:64})', label: 'temporal · spectral' }
@@ -1052,11 +1065,12 @@
         rrect(ctx, x - 3, y - 3, sz + 6, sz + 6, 6, null, COL.line, 2);
         line(ctx, x + n1 * cs, y, x + n1 * cs, y + sz, COL.text, 2); line(ctx, x, y + n1 * cs, x + sz, y + n1 * cs, COL.text, 2);
         dimLeft(ctx, x - 6, y, n1 * cs, '{N:33} T', COL.T, 22); dimLeft(ctx, x - 6, y + n1 * cs, (n - n1) * cs, '{N:21} S', COL.F, 22);
+        dimTop(ctx, x, y - 6, n1 * cs, '{N:33} T', COL.T, 22); dimTop(ctx, x + n1 * cs, y - 6, (n - n1) * cs, '{N:21} S', COL.F, 22);
         // each block lights, with its legend row, as the voice names it
         const blk = [[0, 0, n1, n1], [n1, n1, n - n1, n - n1], [0, n1, n1, n - n1]].map((b, i) => [b, S.ps(2, 0, 0.5, 3.6 + i * 1.5)]);
         blk.forEach(([[r0, c0, h, w], a], i) => { if (a > 0) { rrect(ctx, x + c0 * cs - 2, y + r0 * cs - 2, w * cs + 4, h * cs + 4, 4, null, rgba(COL.K, a), 4); if (i === 2) rrect(ctx, x + r0 * cs - 2, y + c0 * cs - 2, h * cs + 4, w * cs + 4, 4, null, rgba(COL.K, a), 4); } });
         const lab = [['att_weight11', 'T–T', COL.T, 1060, 320], ['att_weight22', 'S–S', COL.F, 1060, 420], ['att_weight12', 'T–S and S–T', COL.N, 1060, 520]];
-        txt(ctx, 'each pair: (64) → tanh(Linear 64 → 32) → · att_weight (32 → 1)', 1060, 600, { size: 22, color: COL.dim, alpha: S.ps(2, 1, 0.6) });
+        txt(ctx, 'each pair: (64) → tanh(Linear 64 → 32) → · att_weight (32 → 1)', 1060, 250, { size: 24, color: COL.text, alpha: S.ps(2, 0, 0.6, 1.5) });
         lab.forEach((l, i) => {
           const a = blk[i][1];
           rrect(ctx, l[3], l[4] - 34, 50, 50, 8, rgba(l[2], 0.5 * a), l[2], 2);
@@ -1072,15 +1086,14 @@
         for (let i = 0; i < 18; i++) {
           const ang = -Math.PI / 2 + i * 2 * Math.PI / 18, x = cx + 360 * Math.cos(ang), y = cy + 260 * Math.sin(ang);
           const a = S.p(3, 0.3, 1 + i * 0.12);
-          line(ctx, x, y, cx, cy, rgba(COL.H, 0.5 * a), 2);
+          arrow(ctx, lerp(x, cx, 0.12), lerp(y, cy, 0.12), lerp(x, cx, 0.8), lerp(y, cy, 0.8), { color: rgba(COL.H, 0.7), lw: 2, head: 10, alpha: a });
           node(ctx, x, y, 18, i < 11 ? COL.T : COL.F, 1);
         }
-        ctx.fillStyle = rgba(COL.H, 0.35); ctx.strokeStyle = COL.H; ctx.lineWidth = 4;
-        ctx.beginPath(); for (let k = 0; k < 10; k++) { const r = k % 2 ? 22 : 50, a = -Math.PI / 2 + k * Math.PI / 5; ctx.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a)); } ctx.closePath(); ctx.fill(); ctx.stroke();
-        txt(ctx, 'master node', cx, cy + 90, { size: 26, weight: 800, align: 'center', color: COL.H });
+        node(ctx, cx, cy, 40, COL.K, 1, 'M'); E.glow(ctx, cx, cy, 110, COL.K, 0.35);
+        txt(ctx, 'master node', cx, cy + 90, { size: 26, weight: 800, align: 'center', color: COL.K });
         txt(ctx, 'learned (1, 1, 64) → attends to all 54 nodes', cx, 860, { size: 26, align: 'center', color: COL.dim });
-        txt(ctx, 'new master = W(Σⱼ αⱼ xⱼ) + W′(master)', cx, 910, { size: 26, mono: true, align: 'center', color: COL.H, alpha: S.p(3, 0.6, 4) });
-        txt(ctx, 'the master reads all 54 nodes; in this layer the nodes do not read the master', cx, 950, { size: 22, align: 'center', color: COL.dim, alpha: S.p(3, 0.6, 5) });
+        txt(ctx, 'new master = W(Σⱼ αⱼ xⱼ) + W′(master)    αⱼ: how much the master attends to node j', cx, 910, { size: 24, mono: true, align: 'center', color: COL.K, alpha: S.p(3, 0.6, 4) });
+        txt(ctx, 'one way: the master reads the nodes; the nodes do not read the master', cx, 950, { size: 26, weight: 700, align: 'center', alpha: S.ps(3, 1, 0.6) });
         ctx.restore();
       }
       const O = S.p(4, 0.7, 0.35);
@@ -1185,10 +1198,11 @@
     beats: [
       "The readout turns sets of nodes into one fixed-size vector. For the temporal nodes, take the largest absolute value over the nodes, and the mean over the nodes. That's two vectors of thirty-two.",
       "Do the same for the spectral nodes, and add the master node. Five vectors of thirty-two, concatenated: B by one hundred and sixty.",
-      "After dropout, a linear layer maps one hundred and sixty to two logits: B by two. A softmax turns them into probabilities; class zero is spoof, and class one is bona fide. [+0.5] Training uses cross-entropy, weighted point one for spoof and point nine for bona fide. [+0.5] The optimizer is Adam, with a learning rate of one in a million, batches of fourteen clips, and RawBoost data augmentation.",
+      "After dropout, a linear layer maps one hundred and sixty to two logits: B by two. A softmax turns them into probabilities; class zero is spoof, and class one is bona fide. [+0.5] Training uses cross-entropy, weighted point one for spoof and point nine for bona fide, because the training set has about nine spoofed clips for every real one.",
+      "The optimizer is Adam, with a learning rate of one in a million and batches of fourteen clips. RawBoost augmentation adds random filtering and noise to the waveform, so the model cannot rely on clean recordings.",
       "Notice that the node counts never reach the classifier. Max and mean remove the node axis, so the readout always produces one hundred and sixty numbers, however many nodes survived pooling.",
     ],
-    hud: S => ({ stage: 7, shape: S.b === 0 ? (S.past(0, 2) ? '({B:B}, {C:32}) × 2' : '({B:B}, {N:16}, {C:32})') : S.b === 1 ? (S.past(1, 1) ? '({B:B}, {C:160})' : '({B:B}, {C:32}) × 5') : '({B:B}, {K:2})', label: S.b >= 2 ? 'logits' : 'readout' }),
+    hud: S => ({ stage: 7, shape: S.b === 0 ? (S.past(0, 2) ? '({B:B}, {C:32}) × 2' : '({B:B}, {N:16}, {C:32})') : S.b === 1 ? (S.past(1, 1) ? '({B:B}, {C:160})' : '({B:B}, {C:32}) × 5') : '({B:B}, {K:2})', label: S.b >= 2 ? 'logits' : 'readout', stageName: S.b === 3 ? 'Training' : undefined }),
     draw(ctx, S) {
       const segs = [['T_max', COL.T], ['T_avg', COL.T], ['S_max', COL.F], ['S_avg', COL.F], ['master', COL.H]];
       const segX = i => 200 + i * 300, segY = 620;
@@ -1242,23 +1256,33 @@
         });
         ctx.globalAlpha = h;
         ctx.globalAlpha = h * S.ps(2, 2, 0.6);
-        rrect(ctx, 1030, 200, 760, 340, 14, COL.panel, COL.line, 2);
+        rrect(ctx, 1030, 200, 760, 380, 14, COL.panel, COL.line, 2);
         txt(ctx, 'training', 1060, 250, { size: 28, weight: 800 });
         ctx.globalAlpha = h;
-        const R = [['loss: cross-entropy', 2], ['class weights: spoof 0.1 · bona fide 0.9', 2], ['Adam · learning rate 1e-6', 3], ['14 clips · RawBoost (filtering + noise)', 3]];
+        const R = [['loss: cross-entropy', 2, 2, 0.2], ['class weights: spoof 0.1 · bona fide 0.9', 2, 2, 1.6], ['Adam · learning rate 1e-6 · 14 clips', 3, 0, 0.3], ['RawBoost: random filtering + noise', 3, 1, 0.3]];
         // dropout: during training, a random half of the 160 inputs is zeroed
         cells(ctx, 190, 490, 1, 20, 30, 22, (r, c) => noise(c, 7, 441) > 0 ? 'rgba(90,100,120,0.35)' : vcol(noise(c, 2, 442), 0.9), 2);
         txt(ctx, 'dropout: half zeroed, training only', 190, 534, { size: 20, color: COL.dim });
-        R.forEach(([s, sn], i) => txt(ctx, s, 1060, 310 + i * 56, { size: 26, alpha: S.ps(2, sn, 0.6, (i % 2) * 2.2) }));
+        R.forEach(([s, b, sn, dl], i) => txt(ctx, s, 1060, 300 + i * (i < 2 ? 46 : 46) + (i >= 2 ? 120 : 0), { size: 26, alpha: S.ps(b, sn, 0.6, dl) }));
+        // why 0.9 for bona fide: the training set is about 9 : 1 spoofed
+        const cb = S.ps(2, 2, 0.6, 3.5);
+        if (cb > 0) {
+          ctx.globalAlpha = h * cb;
+          rrect(ctx, 1060, 380, 470 * cb, 20, 4, rgba(COL.R, 0.8), null); txt(ctx, 'spoof 22,800', 1060 + 480 * cb, 397, { size: 20, weight: 700, color: COL.R });
+          rrect(ctx, 1060, 406, 470 * 2580 / 22800 * cb, 20, 4, rgba(COL.B, 0.8), null); txt(ctx, 'bona fide 2,580', 1060 + 80, 423, { size: 20, weight: 700, color: COL.B });
+          ctx.globalAlpha = h;
+        }
+        const rb = S.ps(3, 1, 0.6, 1.2);
+        if (rb > 0) { ctx.save(); ctx.globalAlpha = h * rb; drawWave(ctx, 1520, 558, 250, 40, { from: 3000, to: 6000, lw: 1.2, color: COL.A }); ctx.globalAlpha = h * rb * 0.8; for (let i = 0; i < 38; i++) rrect(ctx, 1520 + i * 6.5, 558 - 18 * noise(i, 3, 443), 2, 36 * Math.abs(noise(i, 3, 443)), 1, rgba(COL.R, 0.7), null); ctx.restore(); }
         ctx.restore();
       }
       // beat 3: any node count → the same 160
-      const d = S.p(3, 0.6, 0.3);
+      const d = S.p(4, 0.6, 0.3);
       if (d > 0) {
         ctx.save(); ctx.globalAlpha = d;
         txt(ctx, 'max and mean remove the node axis → always 160 numbers', W / 2, 850, { size: 32, weight: 700, align: 'center', color: COL.A });
         [[6, 420], [3, 1180]].forEach(([k, x], q) => {
-          const a = S.ps(3, 1, 0.6, q * 1.2);
+          const a = S.ps(4, 1, 0.6, q * 1.2);
           ctx.globalAlpha = d * a;
           for (let i = 0; i < k; i++) node(ctx, x + i * 34, 910, 12, COL.N);
           arrow(ctx, x + k * 34, 910, x + k * 34 + 70, 910, {});
@@ -1404,7 +1428,7 @@
       CODE.forEach(([s, b, sn, dl], i) => {
         const a = S.ps(b, sn, 0.4, dl);
         if (a <= 0) return;
-        mtxt(ctx, s, 140, 236 + i * 60, { size: 24, mono: true, alpha: a, color: i === 0 ? COL.faint : COL.text });
+        mtxt(ctx, s, 140, 236 + i * 60, { size: 24, mono: true, alpha: a, color: i === 0 ? COL.dim : COL.text });
         if (a < 1) E.glow(ctx, 136, 228 + i * 60, 18, COL.A, 0.8 * (1 - a));
       });
     },

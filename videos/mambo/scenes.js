@@ -25,7 +25,7 @@
     id: 'm_intro', chapter: 0, title: 'Introduction', noHeader: true,
     beats: [
       "This is the third video in the series. We've followed X L S R, and the graph-based AASIST back-end. Now we'll trace XLSR-MamBo, a back-end built from state space models and attention.",
-      "XLSR-MamBo was published by Ng and colleagues in the Findings of ACL 2026. We'll follow its best configuration: MamBo three, Hydra, N three. The official code needs GPU kernels, so we rebuilt it in plain PyTorch to trace every shape. The rebuilt model's parameter count matches the paper exactly.",
+      "XLSR-MamBo was published by Ng and colleagues in the Findings of ACL 2026. We'll follow its best configuration: MamBo three, Hydra, N three. The official code needs GPU kernels, so we rebuilt it in plain PyTorch to trace every shape. The rebuilt model's parameter count matches the paper's: three hundred and nineteen point three seven million.",
       "There are some new axes this time. Yellow S, for the state size of the state space model. Lavender E, for the expanded inner width. [+0.6] Purple H, for heads, and pink P, for the size of each head.",
     ],
     hud: S => S.b >= 2 ? { stage: 0, shape: '({B:B}, {T:208}, {C:1024})' } : null,
@@ -270,6 +270,7 @@
         const ox = 560, oy = 560, sx = 100, sy = 100;
         plotAxes(ctx, ox, oy, sx, sy, -3.6, 3.6, -1, 3.6, [150, 180, 820, 700]);
         curve(ctx, x => Math.max(0, x), ox, oy, sx, sy, -3.6, 3.4, COL.dim, 3, 1, [8, 8]);
+        txt(ctx, 'ReLU, for comparison', 610, 250, { size: 20, color: COL.dim });
         curve(ctx, x => x * sig(x), ox, oy, sx, sy, -3.6, 3.4, COL.A, 5, S.l(2, 2));
         txt(ctx, 'SiLU', 800, 300, { size: 30, weight: 800, color: COL.A });
         txt(ctx, 'min ≈ −0.28 at x ≈ −1.28', 250, 700, { size: 20, mono: true, color: COL.dim });
@@ -315,6 +316,14 @@
           mtxt(ctx, 'h ' + RES, x + 160, 690, { size: 20, weight: 700, color: COL.K, mono: true });
         }
         ctx.globalAlpha = A;
+        const go = (t0, pts, col) => {
+          const u = clamp((S.T(S.b) - t0) / 2.2); if (u <= 0 || u >= 1) return;
+          let L = 0; const seg = []; for (let q = 1; q < pts.length; q++) { const d = Math.hypot(pts[q][0] - pts[q - 1][0], pts[q][1] - pts[q - 1][1]); seg.push(d); L += d; }
+          let d = easeIO(u) * L, q = 0; while (q < seg.length - 1 && d > seg[q]) { d -= seg[q]; q++; }
+          const f = seg[q] ? d / seg[q] : 0; E.glow(ctx, lerp(pts[q][0], pts[q + 1][0], f), lerp(pts[q][1], pts[q + 1][1], f), 34, col, 0.95);
+        };
+        if (S.b === 0) { go(S.st(0, 1) + 0.3, [[120, y], [330, y]], COL.B); go(S.st(0, 2) + 0.3, [[330, y], [330, 440], [330, 550], [330, 640]], COL.A); }
+        if (S.b === 1) go(S.st(1, 0) + 0.3, [[330, 642], [330, 700], [790, 700], [790, y + 60], [826, y + 14]], COL.K);
         txt(ctx, 'residual = h + residual  ·  h = mixer(RMSNorm(residual))', W / 2, 820, { size: 30, mono: true, align: 'center', alpha: S.p(0, 0.6, 9) });
         const b = S.p(1, 0.6, 8);
         txt(ctx, 'after block 30:  out = RMSNorm(h + residual)', W / 2, 890, { size: 30, mono: true, align: 'center', color: COL.A, alpha: b });
@@ -330,9 +339,9 @@
         });
         brace(ctx, 180, 180 + 4 * 265 - 30, 420, COL.M, true);
         brace(ctx, 180 + 4 * 265, 180 + 6 * 265 - 30, 420, COL.H, true);
-        txt(ctx, 'state space layer: N = 3 Hydra + MLP', 180 + 2 * 265 - 15, 480, { size: 26, weight: 700, align: 'center', color: COL.M, alpha: S.p(2, 0.5, 6) });
-        txt(ctx, 'transformer layer: MHA + MLP', 180 + 5 * 265 - 15, 480, { size: 26, weight: 700, align: 'center', color: COL.H, alpha: S.p(2, 0.5, 8) });
-        const v = [['MamBo-1', 'SSM replaces attention (N SSM + MLP)'], ['MamBo-2', 'SSM + MHA instead of MLP ("Mamer")'], ['MamBo-3', 'alternate SSM layers and transformer layers'], ['MamBo-4', 'alternate SSM layers and Mamer layers']];
+        txt(ctx, 'state space layer: N = 3 Hydra + SwiGLU', 180 + 2 * 265 - 15, 480, { size: 26, weight: 700, align: 'center', color: COL.M, alpha: S.p(2, 0.5, 6) });
+        txt(ctx, 'transformer layer: MHA + SwiGLU', 180 + 5 * 265 - 15, 480, { size: 26, weight: 700, align: 'center', color: COL.H, alpha: S.p(2, 0.5, 8) });
+        const v = [['MamBo-1', 'SSM blocks replace attention (N SSM + SwiGLU)'], ['MamBo-2', 'SSM blocks + attention in place of the SwiGLU'], ['MamBo-3', 'alternate SSM layers and transformer layers (this video)'], ['MamBo-4', 'alternate SSM layers and SSM + attention layers']];
         v.forEach((r, i) => {
           const a = S.p(2, 0.4, 12 + i * 0.8), y = 600 + i * 64;
           ctx.globalAlpha = L * a;
@@ -419,8 +428,8 @@
         numRow(ctx, x0, hy, vals.map((v, i) => i < k ? v : null), cw, 56, { size: 24, d: 2, stroke: COL.S, fill: (i) => i < k ? rgba(COL.S, 0.1 + 0.12 * Math.min(2.5, vals[i])) : 'rgba(0,0,0,0)' });
         txt(ctx, hs ? 'A = −1, B = C = 1' : 'a = 0.7, b = c = 1', W / 2, hy + 100, { size: 24, mono: true, align: 'center', color: COL.dim });
         const big = S.ps(2, 3, 0.5), small = S.ps(2, 4, 0.5);
-        if (big > 0 && S.b === 2) { ctx.globalAlpha = T * big * (1 - small); txt(ctx, 'big Δ: decay 0.20, the old state is mostly forgotten; this frame is written in strongly', x0 + 3.5 * cw, hy + 140, { size: 24, weight: 700, align: 'center', color: COL.K }); }
-        if (small > 0 && S.b === 2) { ctx.globalAlpha = T * small; txt(ctx, 'small Δ: decay 0.74, the memory is kept; the frame adds little', x0 + 5.5 * cw, hy + 140, { size: 24, weight: 700, align: 'center', color: COL.K }); }
+        if (big > 0 && S.b === 2) { ctx.globalAlpha = T * big * (1 - 0.5 * small); txt(ctx, 'big Δ (frame 4): decay 0.20 → past forgotten', x0 + 3.5 * cw, hy + 140, { size: 24, weight: 700, align: 'center', color: COL.K }); }
+        if (small > 0 && S.b === 2) { ctx.globalAlpha = T * small; txt(ctx, 'small Δ (frame 6): decay 0.74 → memory kept', x0 + 5.5 * cw, hy + 180, { size: 24, weight: 700, align: 'center', color: COL.K }); }
         // beat 3: Bₜ and Cₜ are vectors made from the frame
         const bc = S.ps(3, 0, 0.6, 0.6);
         if (bc > 0 && S.b === 3) {
@@ -431,6 +440,10 @@
             txt(ctx, l, bx + 70, y + 20, { size: 24, weight: 700, color: COL.S, alpha: S.ps(3, 1, 0.6, i * 1.5) });
           });
           txt(ctx, 'yellow B, C here are the SSM’s matrices · green B is the batch', W / 2, 900, { size: 22, align: 'center', color: COL.dim });
+          // with vector B and C, the state itself has 64 slots: B writes into them, C reads them out
+          ctx.globalAlpha = T * S.ps(3, 1, 0.6, 3);
+          cells(ctx, 1360, 760, 2, 16, 22, 20, (r, c) => rgba(COL.S, 0.25 + 0.5 * Math.abs(noise(r, c, 528))), 2);
+          txt(ctx, 'the real state: 64 slots (next: per head)', 1536, 750, { size: 20, weight: 700, align: 'center', color: COL.S });
           ctx.globalAlpha = T * S.ps(3, 2, 0.6);
           txt(ctx, '"selective": each frame chooses what to store and what to recall', W / 2, 860, { size: 28, weight: 700, align: 'center', color: COL.A });
         }
@@ -440,8 +453,8 @@
       const M4 = S.vis(4, 6);
       if (M4 > 0) {
         ctx.save(); ctx.globalAlpha = M4;
-        const ex = S.b > 4 ? 1 : easeIO(S.l(4, 1, 0.6)), sp = S.b > 4 ? 1 : easeIO(S.l(4, 1, 2.2)), hx = 220, hy = 260;
-        mtxt(ctx, ex < 0.5 ? 'one frame: ({C:128})' : 'expanded × 2: ({E:256})', hx, hy - 20, { size: 26, weight: 700 });
+        const ex = S.b > 4 ? 1 : easeIO(S.l(4, 1, 2.6)), sp = S.b > 4 ? 1 : easeIO(S.l(4, 1, 4.4)), hx = 220, hy = 260;
+        mtxt(ctx, ex < 0.5 ? 'one frame: ({C:128})' : 'one frame, expanded × 2: {C:128} → ({E:256})', hx, hy - 20, { size: 26, weight: 700 });
         const tot = lerp(460, 920, ex);
         for (let k = 0; k < 4; k++) {
           const w = tot / 4, x = hx + k * (w + 30 * sp);
@@ -476,7 +489,8 @@
         ctx.save(); ctx.globalAlpha = U;
         mtxt(ctx, 'y = M x      M{T:ᵢⱼ} = ({S:Cᵢ}·{S:Bⱼ}) · {K:Δⱼ} · e^(A({K:Δⱼ₊₁} + … + {K:Δᵢ}))   for j ≤ i', W / 2, 240, { size: 32, mono: true, align: 'center', weight: 600 });
         const n = 26, sz = 480, cs = sz / n, ci = 18, cj = 9;
-        cells(ctx, 300, 330, n, n, cs, cs, (i, j) => j <= i ? scol(0.25 + 0.7 * Math.exp(-(i - j) / 6) * (0.6 + 0.4 * Math.abs(noise(i, j, 531)))) : 'rgba(40,50,70,0.35)', 1);
+        const rowsOn = S.b > 6 ? n : Math.floor(clamp((S.T(6) - 0.6) / 3.5) * n);
+        cells(ctx, 300, 330, n, n, cs, cs, (i, j) => i >= rowsOn ? 'rgba(40,50,70,0.2)' : j <= i ? scol(0.25 + 0.7 * Math.exp(-(i - j) / 6) * (0.6 + 0.4 * Math.abs(noise(i, j, 531)))) : 'rgba(40,50,70,0.35)', 1);
         dimLeft(ctx, 294, 330, sz, 'output frame i', COL.T, 22); dimTop(ctx, 300, 324, sz, 'input frame j', COL.T, 22);
         // one entry, read out as its formula is
         const ce = S.ps(6, 1, 0.5);
@@ -520,6 +534,19 @@
         ctx.save(); ctx.globalAlpha = A;
         const n = 14, x0 = 330, cw = 90, ft = 6;
         for (let i = 0; i < n; i++) rrect(ctx, x0 + i * cw, 400, 70, 70, 8, rgba(COL.T, 0.35), i === ft && S.b >= 1 ? COL.K : COL.T, i === ft && S.b >= 1 ? 3 : 1.5);
+        if (S.b === 0 && !S.past(0, 1)) {
+          // a causal model: frame t sees only what came before it; a detector may use the whole clip
+          const c1 = S.p(0, 0.6, 0.4), c2 = S.p(0, 0.6, Math.max(1.5, S.st(0, 1) - 3));
+          ctx.save(); ctx.globalAlpha *= c1 * (1 - c2);
+          rrect(ctx, x0 + ft * cw - 4, 396, 78, 78, 10, null, COL.K, 3);
+          brace(ctx, x0, x0 + ft * cw - 10, 380, COL.K, false);
+          txt(ctx, 'causal: frame t sees only the past', x0 + ft * cw / 2, 330, { size: 24, weight: 700, align: 'center', color: COL.K });
+          ctx.restore();
+          ctx.save(); ctx.globalAlpha *= c2;
+          brace(ctx, x0, x0 + n * cw - 20, 380, COL.A, false);
+          txt(ctx, 'a detector can read the whole clip', x0 + n * cw / 2, 330, { size: 24, weight: 700, align: 'center', color: COL.A });
+          ctx.restore();
+        }
         const f = S.l(0, 3, S.st(0, 1)), b = S.l(0, 3, S.st(0, 1) + 3);
         if (S.b === 0) {
           arrow(ctx, x0, 360, x0 + (n * cw - 20) * f, 360, { color: COL.M, lw: 4, alpha: f > 0 ? 1 : 0 });
@@ -549,10 +576,11 @@
       if (M > 0) {
         ctx.save(); ctx.globalAlpha = M;
         const n = 26, sz = 520, x = 300, y = 280;
-        cells(ctx, x, y, n, n, sz / n, sz / n, (i, j) => i === j ? rgba(COL.K, 0.9) : j < i ? rgba(COL.M, 0.25 + 0.55 * Math.exp(-(i - j) / 7)) : rgba(COL.A, 0.25 + 0.55 * Math.exp(-(j - i) / 7)), 1);
+        const rl = S.ps(2, 0, 0.5, 1.2), ru = S.ps(2, 0, 0.5, 2.6), rd = S.ps(2, 0, 0.5, 4.0);
+        cells(ctx, x, y, n, n, sz / n, sz / n, (i, j) => i === j ? rgba(COL.K, 0.9 * rd) : j < i ? rgba(COL.M, (0.25 + 0.55 * Math.exp(-(i - j) / 7)) * rl) : rgba(COL.A, (0.25 + 0.55 * Math.exp(-(j - i) / 7)) * ru), 1);
         rrect(ctx, x - 3, y - 3, sz + 6, sz + 6, 6, null, COL.line, 2);
         [['lower: forward scan', COL.M], ['upper: backward scan', COL.A], ['diagonal: D', COL.K]].forEach((l, i) => {
-          const a = S.p(2, 0.5, 1 + i * 2);
+          const a = [rl, ru, rd][i];
           rrect(ctx, 1000, 360 + i * 90, 50, 50, 8, rgba(l[1], 0.6 * a), l[1], 2);
           txt(ctx, l[0], 1075, 395 + i * 90, { size: 30, weight: 700, alpha: a });
         });
@@ -595,10 +623,10 @@
     code: 'modules/hydra/modules/hydra.py  (d_model=128, expand=2, headdim=64, d_state=64)',
     beats: [
       "Now the real shapes, for one Hydra block. The input is B by two hundred and eight by one hundred and twenty-eight. Inside, the width is expanded two times, to two hundred and fifty-six.",
-      "A single linear layer, in proj, maps one hundred and twenty-eight to seven hundred and seventy-six numbers per frame. They're split into three parts. z: two hundred and fifty-six numbers, for the output gate. x B C: five hundred and twelve numbers. And delta: eight numbers, four heads for each direction.",
-      "The x B C part goes through a depthwise convolution along time, seven frames wide, and a SiLU. Depthwise means each of the five hundred and twelve channels has its own small kernel. Then it's split: x is two hundred and fifty-six numbers, and the other two hundred and fifty-six hold B and C for the forward and backward scans, sixty-four each.",
+      "A single linear layer, in proj, maps one hundred and twenty-eight to seven hundred and seventy-six numbers per frame. [+1] They're split into three parts. z: two hundred and fifty-six numbers, for the output gate. x B C: five hundred and twelve numbers. And delta: eight numbers, four heads for each direction.",
+      "The x B C part goes through a depthwise convolution along time, seven frames wide, and a SiLU. Depthwise means each of the five hundred and twelve channels has its own small kernel. [+1] Then it's split: x is two hundred and fifty-six numbers, and the other two hundred and fifty-six hold B and C for the forward and backward scans, sixty-four each.",
       "The forward and flipped copies are stacked on the batch axis, so x becomes two B by two hundred and eight by two hundred and fifty-six. It's viewed as four heads of sixty-four: two B, by two hundred and eight, by four, by sixty-four. [+1.2] The B and C matrices are two times batch, by two hundred and eight, by sixty-four, shared by all heads.",
-      "The scan returns the same shape. Then the backward half is flipped back in time, and added to the forward half.",
+      "The scan returns the same shape. Then the backward half is flipped back in time, and added to the forward half. [+1] The four heads of sixty-four are joined back into two hundred and fifty-six.",
       "The D term adds x back in, scaled by a gain for each head that is itself computed from x. [+1] We're back to B by two hundred and eight by two hundred and fifty-six.",
       "Finally, a gated RMSNorm: normalize, then multiply by SiLU of z. And out proj maps two hundred and fifty-six back to one hundred and twenty-eight. One Hydra block has about one hundred and thirty-eight thousand parameters, most of them in the two projections.",
     ],
@@ -608,7 +636,7 @@
       if (S.b === 1) return h(S.past(1, 0, 2) ? '({B:B}, {T:208}, 776)' : RES, S.past(1, 0, 2) ? 'in_proj' : 'block input');
       if (S.b === 2) return S.past(2, 2) ? h('x ({B:B}, {T:208}, {E:256})', 'after split') : h('xBC ({B:B}, {T:208}, 512)', 'conv1d');
       if (S.b === 3) return S.past(3, 2, 0.8) ? h('B, C matrices ({B:2B}, {T:208}, {S:64})', 'scan inputs') : S.past(3, 1) ? h('({B:2B}, {T:208}, {H:4}, {D:64})', 'heads') : h('({B:2B}, {T:208}, {E:256})', 'stacked');
-      if (S.b === 4) return S.past(4, 1) ? h('({B:B}, {T:208}, {E:256})', 'flipped back, added') : h('({B:2B}, {T:208}, {H:4}, {D:64})', 'scan output');
+      if (S.b === 4) return S.past(4, 2) ? h('({B:B}, {T:208}, {E:256})', 'heads joined') : S.past(4, 1) ? h('({B:B}, {T:208}, {H:4}, {D:64})', 'flipped back, added') : h('({B:2B}, {T:208}, {H:4}, {D:64})', 'scan output');
       if (S.b === 5) return h('({B:B}, {T:208}, {E:256})', 'with D·x');
       return h(S.past(6, 1) ? RES : '({B:B}, {T:208}, {E:256})', S.past(6, 1) ? 'block output' : 'gated norm');
     },
@@ -735,7 +763,11 @@
         lab(yA + h / 2, 'forward scan', 1 - mg, COL.M);
         lab(yA + h * 1.5 + 24, 'backward scan', (1 - mg) * (1 - 0.5 * mg), COL.A);
         if (mg > 0.5) lab(yA + h / 2, 'y', mg, COL.text);
-        txt(ctx, mg < 0.5 ? 'scan output: same shape' : 'y = forward + flip(backward): flipped back in time, then added', x0 + SW / 2, yA + 2 * h + 90, { size: 24, weight: 700, align: 'center', color: COL.dim });
+        txt(ctx, mg < 0.5 ? 'scan output: same shape' : 'y = forward + flip(backward)', x0 + SW / 2, yA + 2 * h + 90, { size: 26, weight: 700, align: 'center', color: COL.dim });
+        // the four heads (pink outlines) dissolve back into one 256-wide band
+        const jn = 1 - S.ps(4, 2, 0.8, 0.3);
+        if (jn > 0) { ctx.save(); ctx.globalAlpha *= jn; for (let k = 0; k < 4; k++) rrect(ctx, x0 - 4, yA + k * h / 4 + 1, SW + 8, h / 4 - 2, 4, null, COL.D, 2.5); ctx.restore(); }
+        if (jn < 1) txt(ctx, '4 heads × 64 → 256', x0 + SW / 2, yA - 16, { size: 24, weight: 700, align: 'center', color: COL.E, alpha: 1 - jn });
         ctx.restore();
       }
       // beat 5: the D term, with an input-dependent gain per head
@@ -784,7 +816,7 @@
       "The feed-forward blocks use SwiGLU. One linear layer maps one hundred and twenty-eight to six hundred and eighty-two, and the result is split into two halves of three hundred and forty-one: a gate, and a value.",
       "The output is SiLU of the gate, times the value, element by element, and a second linear layer maps three hundred and forty-one back to one hundred and twenty-eight. Three hundred and forty-one is eight thirds of one hundred and twenty-eight, rounded down, which keeps the parameter count close to a classic feed-forward that is four times wider. One SwiGLU block has about one hundred and thirty-one thousand parameters.",
     ],
-    hud: S => ({ stage: 3, shape: S.b === 0 ? (S.past(0, 1, 3) ? 'gate, value ({B:B}, {T:208}, 341)' : '({B:B}, {T:208}, 682)') : RES }),
+    hud: S => ({ stage: 3, shape: S.b === 0 ? (S.past(0, 1, 3) ? 'gate, value ({B:B}, {T:208}, 341)' : S.past(0, 1, 1) ? '({B:B}, {T:208}, 682)' : RES) : RES }),
     draw(ctx, S) {
       const cy = 500;
       const bar = (x, h, lbl, col, a) => { ctx.save(); ctx.globalAlpha = a; rrect(ctx, x, cy - h / 2, 70, h, 8, rgba(col, 0.3), col, 2); txt(ctx, lbl, x + 35, cy + h / 2 + 36, { size: 26, mono: true, weight: 700, align: 'center', color: col }); ctx.restore(); };
@@ -812,7 +844,7 @@
         arrow(ctx, 700, cy + 150, 900, cy + 30, {});
         ctx.strokeStyle = COL.text; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(920, cy, 28, 0, 7); ctx.stroke();
         txt(ctx, '⊙', 920, cy + 2, { size: 34, weight: 700, align: 'center', base: 'middle' });
-        txt(ctx, 'element by element', 958, cy + 64, { size: 22, color: COL.dim });
+        txt(ctx, 'element by element', 920, cy + 70, { size: 20, color: COL.dim, align: 'center' });
         ctx.globalAlpha = b * r2;
         arrow(ctx, 950, cy, 1010, cy, {});
         rrect(ctx, 1020, cy - 145, 70, 290, 8, rgba(COL.M, 0.3), COL.M, 2); txt(ctx, '341', 1055, cy + 180, { size: 26, mono: true, weight: 700, align: 'center', color: COL.M });
@@ -821,7 +853,8 @@
         bar(1240, 110, '128', COL.C, 1);
         ctx.globalAlpha = b;
         txt(ctx, 'hidden = ⌊8 · 128 / 3⌋ = 341', 1360, 330, { size: 28, mono: true, alpha: S.ps(1, 1, 0.6) });
-        txt(ctx, '128·682 + 341·128 + 128 (its RMSNorm) = 131,072', 1360, 390, { size: 24, mono: true, color: COL.text, alpha: S.ps(1, 2, 0.6) });
+        txt(ctx, '128·682 + 341·128 + 128 (RMSNorm)', 1360, 390, { size: 24, mono: true, color: COL.text, alpha: S.ps(1, 2, 0.6) });
+        txt(ctx, '= 131,072 parameters per SwiGLU block', 1360, 430, { size: 24, mono: true, weight: 700, color: COL.K, alpha: S.ps(1, 2, 0.6, 1) });
         mtxt(ctx, RES + ' → ' + RES, W / 2, 900, { size: 28, mono: true, align: 'center', alpha: S.ps(1, 0, 0.6, 3) });
         ctx.restore();
       }
@@ -911,21 +944,21 @@
         ctx.save(); ctx.globalAlpha = W4;
         rrect(ctx, 250, 230, 640, 470, 16, COL.panel, rgba(COL.M, 0.6), 2);
         rrect(ctx, 1030, 230, 640, 470, 16, COL.panel, rgba(COL.H, 0.6), 2);
-        txt(ctx, 'Hydra (SSM)', 570, 290, { size: 32, weight: 800, align: 'center', color: COL.M });
+        txt(ctx, 'Hydra (scans both ways)', 570, 290, { size: 32, weight: 800, align: 'center', color: COL.M });
         txt(ctx, 'Attention', 1350, 290, { size: 32, weight: 800, align: 'center', color: COL.H });
-        const strip = x => { for (let i = 0; i < 16; i++) rrect(ctx, x + i * 30, 560, 24, 40, 4, i === 2 ? rgba(COL.R, 0.6) : rgba(COL.T, 0.3), i === 2 ? COL.R : COL.T, i === 2 ? 2 : 1); };
+        const strip = (x, r) => { for (let i = 0; i < 16; i++) rrect(ctx, x + i * 30, 560, 24, 40, 4, i === r ? rgba(COL.R, 0.6) : rgba(COL.T, 0.3), i === r ? COL.R : COL.T, i === r ? 2 : 1); };
         const h1 = S.ps(3, 1, 0.6);
         ctx.globalAlpha = W4 * h1;
-        strip(330);
+        strip(330, 5);
         // the artifact's share of the state, fading as the scan moves on
         const u = clamp((S.T(3) - S.st(3, 1) - 0.8) / 4);
-        for (let i = 2; i < 2 + Math.floor(u * 14); i++) rrect(ctx, 336 + i * 30, 545 - 60 * Math.exp(-(i - 2) / 3), 12, 60 * Math.exp(-(i - 2) / 3), 2, rgba(COL.R, 0.8), null);
-        E.glow(ctx, 342 + (2 + u * 13) * 30, 580, 30, COL.M, 0.9 * (u < 1 ? 1 : 0));
-        txt(ctx, 'the artifact (red) fades from the state', 570, 390, { size: 24, align: 'center', color: COL.R });
-        txt(ctx, 'hard to retrieve it far away', 570, 430, { size: 24, align: 'center', color: COL.text });
+        // the red frame's trace in the state, for the frames around it, in both directions: it fades with distance
+        for (let i = 0; i < 16; i++) { const d = Math.abs(i - 5), a = clamp(u * 8 - d); if (a > 0) rrect(ctx, 336 + i * 30, 545 - 60 * Math.exp(-d / 2.5), 12, 60 * Math.exp(-d / 2.5), 2, rgba(COL.R, 0.8 * a), null); }
+        txt(ctx, 'an artifact (red) leaves a trace that fades', 570, 390, { size: 24, align: 'center', color: COL.R });
+        txt(ctx, 'with distance, both ways: hard to fetch far away', 570, 430, { size: 24, align: 'center', color: COL.text });
         const a2 = S.ps(3, 2, 0.6);
         ctx.globalAlpha = W4 * a2;
-        strip(1110);
+        strip(1110, 2);
         ctx.strokeStyle = COL.H; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(1122 + 15 * 30, 556); ctx.quadraticCurveTo(1330, 440, 1122 + 2 * 30, 556); ctx.stroke();
         txt(ctx, 'global retrieval: jumps straight to it', 1350, 390, { size: 24, align: 'center', color: COL.H });
         txt(ctx, '208 × 208 scores, 4 heads of 32', 1350, 430, { size: 24, align: 'center' });
@@ -955,6 +988,7 @@
       for (let L = 0; L < 5; L++) txt(ctx, 'layer ' + (L + 1), 365 + L * 300, 200, { size: 22, weight: 700, align: 'center', color: COL.dim, alpha: L === 0 ? S.p(0, 0.4, 0.3) : S.ps(0, 1, 0.4, (L - 1) * 0.35) });
       txt(ctx, '743,076 per layer', 365, 800, { size: 30, mono: true, weight: 700, align: 'center', color: COL.K, alpha: S.ps(0, 0, 0.6, 4) });
       txt(ctx, '× 5  =  3,715,380', 1000, 800, { size: 30, mono: true, weight: 700, align: 'center', color: COL.K, alpha: S.ps(0, 1, 0.6, 1) });
+      txt(ctx, '+ input proj, norms, pooling, head = 3.93 M back-end', 1460, 800, { size: 22, color: COL.dim, alpha: S.ps(0, 1, 0.6, 2.5) });
       mtxt(ctx, 'every block: ' + RES + ' → ' + RES, W / 2, 860, { size: 26, mono: true, align: 'center', alpha: S.ps(1, 0, 0.6, 1) });
       mtxt(ctx, 'after block 30:  RMSNorm(h + residual)  →  ' + RES, W / 2, 920, { size: 26, mono: true, align: 'center', color: COL.A, alpha: S.ps(1, 1, 0.6, 1) });
     },
@@ -1048,10 +1082,11 @@
         const ox = 260, oy = 820, sx = 700, sy = 110;
         plotAxes(ctx, ox, oy, sx, sy, 0, 1, 0, 4.4, [180, 270, 900, 620]);
         curve(ctx, p => -Math.log(p), ox, oy, sx, sy, 0.02, 1, COL.dim, 3, S.l(0, 2, 1), [8, 8]);
-        curve(ctx, p => -Math.pow(1 - p, 2) * Math.log(p), ox, oy, sx, sy, 0.02, 1, COL.K, 5, S.l(0, 2, S.st(0, 2)));
+        curve(ctx, p => -Math.pow(1 - p, 2) * Math.log(p), ox, oy, sx, sy, 0.02, 1, COL.K, 5, S.l(0, 2, S.st(0, 1) + 1.5));
+        txt(ctx, 'loss', ox - 30, oy - 4.2 * sy + 20, { size: 22, color: COL.dim, align: 'right' });
         txt(ctx, 'p (probability of the true class)', ox + sx, oy + 40, { size: 22, color: COL.dim, align: 'right' });
         txt(ctx, 'cross-entropy (γ = 0)', 600, 420, { size: 24, color: COL.dim, weight: 700 });
-        txt(ctx, 'focal, γ = 2', 520, 700, { size: 24, color: COL.K, weight: 700, alpha: S.ps(0, 2, 0.6, 1) });
+        txt(ctx, 'focal, γ = 2', 520, 700, { size: 24, color: COL.K, weight: 700, alpha: S.ps(0, 1, 0.6, 2.5) });
         wrap(ctx, 'At p = 0.9 (easy): CE = 0.105, focal = 0.001. Easy clips stop dominating the gradient.', 1150, 420, 640, 42, { size: 28, alpha: S.ps(0, 2, 0.6, 3) });
         txt(ctx, 'α = [0.1 spoof, 0.9 bona fide]', 1150, 620, { size: 28, mono: true, alpha: S.ps(0, 3, 0.6) });
         ctx.restore();
@@ -1097,7 +1132,7 @@
     ['input_proj  Linear 1024 → 128      ({B:2}, {T:208}, {C:128})', 0, 1, 0.5],
     ['hydra: in_proj                     ({B:2}, {T:208}, 776)', 1, 0, 0.6],
     ['hydra: conv1d (depthwise k=7)      ({B:2}, {T:208}, 512)', 1, 0, 2.2],
-    ['hydra: x as heads, both directions ({B:4}, {T:208}, {H:4}, {D:64})', 1, 0, 4.2],
+    ['hydra: x as heads                  ({B:4}, {T:208}, {H:4}, {D:64})', 1, 0, 4.2],
     ['hydra: B, C matrices               ({B:4}, {T:208}, {S:64})', 1, 0, 6.2],
     ['swiglu: gate, value                ({B:2}, {T:208}, 341)', 2, 0, 0.3],
     ['mha: in_proj ({B:2}, {T:208}, 384)  ·  scores ({B:2}, {H:4}, {T:208}, {T:208})', 2, 0, 1.4],

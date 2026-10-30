@@ -31,7 +31,7 @@ a reviewer with a fresh context).
 | E8 | A dead stretch (nothing new for > 6 s while narration moves on) or a cluttered frame where the eye can't find the subject | Clarity ≤ 6 |
 | E9 | An element pops in fully formed, jitters, or moves in a way that looks broken | Motion ≤ 6 |
 
-## Step 2: scorecard (60 points)
+## Step 2: scorecard
 
 | Dimension | Weight | Max | 8+/10 means |
 |---|---|---|---|
@@ -42,7 +42,9 @@ a reviewer with a fresh context).
 | Motion quality | ×1 | 10 | movement explains (it carries an element to where it goes next); smooth; never decorative spinning |
 | Visual polish | ×1 | 10 | clear hierarchy, readable type, balanced frames, consistent style |
 
-Score each dimension 1–10, multiply by its weight (total out of 100). Caps from step 1 apply.
+Score each dimension 1–10 and multiply by its weight: the weighted points add up to at most 110. Report that sum and the
+total on a 100 scale (sum × 100 / 110), which the verdict uses. Caps from step 1 apply. (Rounds scored before this
+note reported the raw sum as if it were out of 100.)
 A score of 8 or more must name the file it was judged from; otherwise 7 at most.
 
 | Total | Verdict |
